@@ -1,0 +1,14 @@
+{
+  "name": "functions",
+  "description": "Reloop server-side enforcement: listing limits and photo cleanup",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.3.0",
+    "firebase-functions": "^5.0.1",
+    "stripe": "^16.2.0"
+  }
+}

@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /listings/{listingId} {
+      // Anyone can browse listings — it's a public marketplace.
+      allow read: if true;
+
+      // Creation happens exclusively through the createListing / seedListings
+      // Cloud Functions (they use the Admin SDK, which bypasses these rules —
+      // this just blocks anyone from writing a listing doc directly).
+      allow create: if false;
+
+      // The seller can edit or delete their own listing. Marking a listing
+      // "sold" no longer happens here at all — that only ever happens via
+      // claimGiveaway or the payment webhook (both Admin SDK), because a
+      // client-writable status flip would mean a buyer could mark any paid
+      // listing sold without actually paying for it.
+      allow update: if request.auth != null && resource.data.sellerId == request.auth.uid;
+
+      allow delete: if request.auth != null
+                    && resource.data.sellerId == request.auth.uid;
+    }
+
+    match /orders/{orderId} {
+      // Only the buyer or seller on an order can see it.
+      allow read: if request.auth != null
+                  && (resource.data.buyerId == request.auth.uid
+                      || resource.data.sellerId == request.auth.uid);
+
+      // Orders are created exclusively by the payment webhook (Admin SDK)
+      // once Stripe confirms a charge — never by the client. A
+      // client-created order would be a claim of purchase with no actual
+      // payment behind it. This applies to giveaways too now — they go
+      // through the same Stripe-verified flow, just for a flat €3 fee.
+      allow create: if false;
+
+      // A client can only ever cancel an order — nothing else. "completed"
+      // now means a real Stripe transfer moved the seller's money, and that
+      // only ever happens inside submitShipment (Admin SDK, after a
+      // tracking number is verified). If clients could set status to
+      // "completed" directly, a buyer could mark an order paid-out before
+      // the seller ever shipped anything.
+      allow update: if request.auth != null
+                    && (resource.data.buyerId == request.auth.uid
+                        || resource.data.sellerId == request.auth.uid)
+                    && request.resource.data.status == 'cancelled'
+                    && resource.data.status == 'awaiting_shipment'
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+
+      allow delete: if false;
+    }
+
+    match /withdrawals/{withdrawalId} {
+      // A user can only see and request their own withdrawals.
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /rateLimits/{uid} {
+      // Written only by the createListing Cloud Function's Admin SDK, which
+      // bypasses these rules. No legitimate reason for a client to read or
+      // write this directly — reading it would leak nothing sensitive, but
+      // writing it could only mean resetting your own limit.
+      allow read, write: if false;
+    }
+
+    match /users/{uid} {
+      // Holds Stripe Connect status (account id, charges/payouts enabled).
+      // A user can see their own status; nobody else needs to, and writes
+      // only ever come from the Stripe Connect Cloud Functions' Admin SDK —
+      // a client "confirming" their own payment setup would be meaningless
+      // (and dangerous) since it isn't backed by anything Stripe actually verified.
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}
