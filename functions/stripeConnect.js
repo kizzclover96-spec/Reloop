@@ -137,8 +137,14 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
   }
 
   if (event.type === "payment_intent.succeeded") {
-    const { markOrderPaid } = require("./checkout");
-    await markOrderPaid(event.data.object);
+    const paymentIntent = event.data.object;
+    if (paymentIntent.metadata?.cartCheckoutId) {
+      const { markCartPaid } = require("./cartCheckout");
+      await markCartPaid(paymentIntent);
+    } else {
+      const { markOrderPaid } = require("./checkout");
+      await markOrderPaid(paymentIntent);
+    }
   }
 
   if (event.type === "payment_intent.payment_failed") {

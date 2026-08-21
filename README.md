@@ -157,9 +157,17 @@ Sign up with an email/password or Google, then in the **Discover** tab tap **Loa
 - `src/data/localStore.ts` — IndexedDB wrapper for local-only data (recently viewed, search radius) — download/delete controls live in Profile → Your data
 - `src/ProductView.tsx` — product detail screen (image carousel, buy/claim-free)
 - `src/Checkout.tsx` — Stripe Payment Element checkout screen
+- `src/ReceiptDetail.tsx` — full receipt view with QR code (buyer receipt, or the seller's printable green shipping-label receipt)
+- `src/DataDisclosure.tsx` — contextual data/device-permissions summary
+- `src/legal/` — Terms of Service, Privacy Policy, Data Processing Agreement, Refund Policy content + `LegalViewer.tsx` renderer
+- `src/Cart.tsx` — cart screen, items grouped by seller with combined shipping
+- `src/CartCheckout.tsx` — multi-item checkout screen (reuses Checkout.tsx's PayForm)
+- `src/context/CartContext.tsx` — cart state, persisted locally via IndexedDB
+- `src/data/cart.ts` — client wrapper for cart checkout
 - `src/stripeClient.ts` — Stripe.js loader singleton
 - `src/utils/price.ts` — shared buyer-price display constants (must stay in sync with `functions/checkout.js`)
 - `src/utils/shipping.ts` — shared shipping rate display constants (must stay in sync with `functions/shipping.js`)
+- `src/utils/sanitize.ts` — input sanitization for user-submitted text
 - `src/ProfileScreen.tsx` — wallet, activity, trust, area, settings
 - `src/icons/*.tsx` — bottom nav icons
 - `src/icons/ClothingIcons.tsx` — hand-drawn category icons (dress, sneaker, jacket, bag, heels, pants) used in the hero rotation and Featured categories
@@ -171,6 +179,8 @@ Sign up with an email/password or Google, then in the **Discover** tab tap **Loa
 - `functions/submitShipment.js` — seller ships a package; verifies the tracking number via AfterShip's API; creates the real Stripe transfer once verified
 - `functions/getSellerBalance.js` — reads the seller's real Stripe Connect balance
 - `functions/shipping.js` — shipping rates + the business-hours ship-by deadline calculator
+- `functions/receipt.js` — generates the 6-character receipt code
+- `functions/cartCheckout.js` — multi-item cart checkout: one PaymentIntent split into per-seller orders after payment
 - `firestore.rules` / `storage.rules` / `firebase.json` — security rules + deploy config (see step 4)
 
 ## Content moderation
@@ -245,7 +255,37 @@ Profile → Your data has two real buttons, backed by two Cloud Functions (`func
 
 **The one deliberate exception**: orders aren't deleted outright. An order is a shared record between a buyer and a seller — deleting it would corrupt the *other* person's transaction history and trust count, which they have no say in. Instead, your name on any order you're part of gets replaced with "Deleted user"; the record survives for the other party, but nothing personally identifying about you does.
 
-## Pickup address — phase 1 of 4 (roadmap: address → shipping → receipts → multi-item cart)
+## Receipts & QR codes — phase 3 of 4
+
+When a payment succeeds, a popup confirms it and points to Profile → Receipts (`ProductView.tsx`) — no more separate inline "finalizing" text, an actual modal.
+
+Every order gets a **6-character receipt code** at creation time (`generateReceiptCode()` in `functions/receipt.js` — letters, digits, and a few symbols, deliberately excluding visually-ambiguous characters like `0`/`O` or `1`/`l`/`I`). It's generated once, server-side, and stored directly on the order document — since both the buyer and seller can already read that same document (existing `firestore.rules`), there's no need for two separately-generated codes that have to somehow match; they're both just reading the same field.
+
+**Profile → Receipts** now lists orders from both sides — your purchases and your sales — sorted by date. Tapping one opens the full receipt (`ReceiptDetail.tsx`):
+
+- **As a buyer**: standard receipt — item, date, total, the receipt code, and a QR code encoding `{ code, orderId, item, price }`.
+- **As a seller, while the order is still awaiting shipment**: the receipt renders in green with an "Awaiting order receipt" badge, and additionally shows the buyer's name and full shipping address as large, readable text — meant to be printed (there's a literal Print button, `window.print()`) and used as a shipping label sticker. Its QR code encodes `{ sellerId, code }` — the same code as the buyer's receipt for that order, plus the seller's own ID, rather than the full order details (that's on the printed label as plain text already, which is what a courier actually needs to read).
+- **As a seller, once shipped**: same receipt, no green badge — it's just a normal-styled confirmation at that point.
+
+## Multi-item cart with split payment — phase 4 of 4
+
+One checkout, one payment, split across however many original sellers were involved — buyers can now add multiple items (possibly from different sellers) and pay once.
+
+### How it works
+
+- **Cart** (`src/context/CartContext.tsx`) is just a list of listing IDs, persisted locally via IndexedDB (same mechanism as recently-viewed/preferences) — never touches Firestore. Add to cart from any product page (the small cart-icon button beside Buy now); the cart icon on Home shows a live count badge.
+- **One PaymentIntent covers the whole cart** (`functions/cartCheckout.js`), even across multiple sellers. This works cleanly *because* of the phase 2 restructuring — since payment already lands on Reloop's own platform balance rather than auto-transferring via Stripe's single-destination model, there was never a technical reason a PaymentIntent had to correspond to exactly one seller. Splitting to multiple sellers now just means creating multiple orders after payment succeeds, each independently gated behind its own seller shipping their own item(s) — exactly the same mechanism single-item purchases already used.
+- **Items from the same seller share one shipping charge and ship as one package** — "1 seller · 1 package," per the original idea. They're linked by a shared `cartGroupId` on their resulting orders. Shipping cost for the group uses the *largest* package size among that seller's cart items — a simplification, not a true combined-box volumetric calculation, in the same spirit as the flat S/M/L rates themselves.
+- **Stripe's metadata size limit** would break under a real multi-item cart's full line-item breakdown, so the actual breakdown lives in a `cartCheckouts/{id}` Firestore doc (Admin-SDK-only, never client-readable) — the PaymentIntent's metadata just points at it.
+- **Shipping, grouped**: Profile → Activity → Pickup now shows one row per seller-group instead of one per item — "3 items in this package" — with a single Ship package action that verifies one tracking number and creates **one combined Stripe transfer** summing every item's `sellerEarned` in the group, rather than a separate transfer per item.
+
+### What I did NOT build
+
+- The "add another item from this seller and save on shipping" nudge — the *mechanics* behind that (combined shipping, grouped orders) are real and working; the actual UI copy suggesting it to the buyer while browsing isn't implemented. Worth adding as a small follow-up if you want the nudge itself.
+- The fancier "let Reloop pick shipping options dynamically via real carrier rates" idea mentioned alongside the original flat-rate ask — still flat S/M/L rates, same as phase 2, now just extended to groups.
+- No cart persistence across devices — it's local to the browser/device (IndexedDB), same privacy posture as recently-viewed items. Signing in on a second device starts an empty cart there.
+
+## Pickup address — phase 1 of 4 (roadmap: address → shipping → receipts → multi-item cart — all four phases done)
 
 Every new account is required to add and verify a pickup address before reaching the main app (`AddressSetup.tsx`, gated in `App.jsx` right alongside the existing auth gate). It's not skippable at signup, but fully editable afterward via Profile → Settings → Pickup preferences.
 
@@ -330,6 +370,33 @@ This meant a few places that used to read the live listing needed to switch to r
 The share button (`ProductView.tsx`) uses the native Web Share API where available — this is what makes "share to WhatsApp / Messages / Mail / etc." work, since it hands off to whatever the OS's own share sheet offers rather than Reloop trying to integrate with each app individually. Falls back to copying the link to the clipboard on browsers without Web Share support (most desktop browsers).
 
 Shared links use the shape `https://yourapp.com/?item=<listingId>` — `App.jsx` watches for that query param on load and opens straight into that product once listings have finished loading, then cleans the URL.
+
+## Security, legal, and polish pass
+
+A broad round covering security hardening, legal compliance, localization, and UX finishing touches.
+
+### Security
+- **Input sanitization** (`src/utils/sanitize.ts`, mirrored server-side in `functions/index.js`) — strips HTML-injection and control characters from listing titles/descriptions and display names before storage. Defense-in-depth: React already escapes all rendered text by default (no `dangerouslySetInnerHTML` anywhere in this codebase), so this protects surfaces outside the app itself (emails, PDFs, future admin tools).
+- **Remember me** — off by default (session-only persistence); opt-in via a toggle on the login screen (`setRememberMe` in `firebase.ts`).
+- **A real bug fix**: cancelling an order never actually refunded the buyer — it was just a Firestore status flip. `functions/cancelOrder.js` now issues a genuine Stripe refund for that order's own price before marking it cancelled, and the client-direct path is locked out in `firestore.rules`.
+- **HSTS + security headers** added to `firebase.json`'s hosting config (Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Referrer-Policy) — hardening beyond Firebase Hosting's automatic HTTPS baseline.
+
+### Legal & compliance
+- **Four legal documents** (`src/legal/`) — Terms of Service, Privacy Policy, Data Processing Agreement, Refund Policy. Each is genuinely substantive and GDPR-aware, and each opens with an explicit "AI-drafted, needs real legal review" notice — these are a starting point, not a finished legal product. The Refund Policy in particular does *not* say an unconditional "no refunds," since that framing would likely itself violate EU consumer protection law; it expresses the "we don't proactively refund" intent within what's actually legally sound.
+- **Consent gate** (`LoginScreen.tsx`) — a single checkbox blocks every sign-in method (email, Google, Yahoo) until the four documents are acknowledged, each viewable in full via `LegalViewer.tsx`.
+- **Yahoo login** added via Firebase's generic `OAuthProvider("yahoo.com")` — needs enabling in Firebase Console (Yahoo isn't a built-in provider like Google).
+- **Device permissions / data disclosure** (`DataDisclosure.tsx`, off Profile → Privacy) — a contextual, honest summary distinct from the full Privacy Policy: what's collected, and a permission-by-permission breakdown (Camera used only at listing-photo time via the native picker; Location, Notifications, and Microphone explicitly **not** used anywhere in the app).
+
+### Localization
+- **Minimalist white/black/blue theme** — recolored centrally in `theme.ts` (kept the old `oxblood`/`oxbloodSoft` key names to avoid touching every file that references them; just repointed the values).
+- **Four new languages** — Turkish, Chinese (Simplified), Hindi, Albanian, alongside the existing English/German/Spanish/French. Every one of the 326 translation keys is covered in all 8 languages — verified programmatically, zero gaps.
+- **Bundesland selector** replaces the hardcoded "Stuttgart" — Profile → Your area now lets a seller pick from all 16 German federal states, and new listings use that choice instead of a fixed city.
+
+### UX
+- **Delete own listing** — with a confirm step, cleans up both the Firestore doc and its Storage photos.
+- **Onboarding carousel on the login screen** — 4 auto-rotating slides ("Give clothes a second life," etc.) introducing what Reloop is before someone signs up.
+- **"More from this seller"** on the product page — a horizontal strip of the seller's other active listings.
+- **"Add another item from this seller and save on shipping"** nudge in the cart, with actual quick-add thumbnails — not just text, a real one-tap add.
 
 ## Known limitations
 

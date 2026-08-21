@@ -88,64 +88,81 @@ async function verifyWithCarrier({ trackingNumber, orderId }) {
 }
 
 /**
- * Seller submits a tracking number for an order they need to ship. If
- * verified (see verifyWithCarrier above), this is the moment the seller's
- * cut actually leaves Reloop's platform Stripe balance — via a real
- * stripe.transfers.create() call, not just a Firestore status flip.
- * Giveaway orders (sellerEarned = 0) skip the transfer entirely since
- * there's nothing to pay out.
+ * Seller submits a tracking number for an order — or, if items from the
+ * same cart checkout share a cartGroupId, for the whole "1 seller · 1
+ * package" group at once. Either way, once verified (see verifyWithCarrier
+ * above), this is the moment the seller's cut actually leaves Reloop's
+ * platform Stripe balance — via a real stripe.transfers.create() call, one
+ * combined transfer covering every order in the group, not just a
+ * Firestore status flip. Giveaway orders (sellerEarned = 0) contribute
+ * nothing to that transfer amount.
  */
 exports.submitShipment = onCall({ secrets: [STRIPE_SECRET_KEY, AFTERSHIP_API_KEY] }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
 
-  const { orderId, carrier, trackingNumber } = request.data || {};
-  if (!orderId || !carrier || !trackingNumber) {
+  const { orderId, cartGroupId, carrier, trackingNumber } = request.data || {};
+  if ((!orderId && !cartGroupId) || !carrier || !trackingNumber) {
     throw new HttpsError("invalid-argument", "Missing shipment details.");
   }
 
-  const orderRef = db.collection("orders").doc(orderId);
-  const orderSnap = await orderRef.get();
-  if (!orderSnap.exists) throw new HttpsError("not-found", "Order not found.");
-  const order = orderSnap.data();
+  let orders;
+  if (cartGroupId) {
+    const snap = await db.collection("orders").where("cartGroupId", "==", cartGroupId).get();
+    orders = snap.docs.map((d) => ({ ref: d.ref, data: d.data() }));
+    if (orders.length === 0) throw new HttpsError("not-found", "Order group not found.");
+  } else {
+    const ref = db.collection("orders").doc(orderId);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
+    orders = [{ ref, data: snap.data() }];
+  }
 
-  if (order.sellerId !== uid) throw new HttpsError("permission-denied", "Not your order.");
-  if (order.status !== "awaiting_shipment") throw new HttpsError("failed-precondition", "ALREADY_SHIPPED");
+  for (const { data } of orders) {
+    if (data.sellerId !== uid) throw new HttpsError("permission-denied", "Not your order.");
+    if (data.status !== "awaiting_shipment") throw new HttpsError("failed-precondition", "ALREADY_SHIPPED");
+  }
 
-  const result = await verifyWithCarrier({ trackingNumber, orderId });
+  const result = await verifyWithCarrier({ trackingNumber, orderId: cartGroupId || orderId });
   if (!result.verified) {
     throw new HttpsError("failed-precondition", "VERIFY_FAILED");
   }
 
+  const totalSellerEarned = orders.reduce((sum, o) => sum + (o.data.sellerEarned || 0), 0);
   let transferId = null;
 
-  if (order.sellerEarned > 0) {
+  if (totalSellerEarned > 0) {
     const sellerSnap = await db.collection("users").doc(uid).get();
     const sellerAccountId = sellerSnap.exists ? sellerSnap.data().stripeAccountId : null;
     if (!sellerAccountId) throw new HttpsError("failed-precondition", "SELLER_NOT_READY");
 
     const stripe = getStripe(STRIPE_SECRET_KEY.value());
     const transfer = await stripe.transfers.create({
-      amount: Math.round(order.sellerEarned * 100),
+      amount: Math.round(totalSellerEarned * 100),
       currency: "eur",
       destination: sellerAccountId,
-      transfer_group: orderId,
-      metadata: { orderId },
+      transfer_group: cartGroupId || orderId,
+      metadata: cartGroupId ? { cartGroupId } : { orderId },
     });
     transferId = transfer.id;
   }
 
-  await orderRef.update({
-    status: "completed",
-    completedAt: Date.now(),
-    carrier,
-    trackingNumber,
-    verifiedCarrierSlug: result.detectedCarrier || null, // what AfterShip actually detected, vs. the seller's dropdown pick
-    shipmentVerifiedAt: Date.now(),
-    ...(transferId ? { transferId } : {}),
-  });
+  const batch = db.batch();
+  const now = Date.now();
+  for (const { ref } of orders) {
+    batch.update(ref, {
+      status: "completed",
+      completedAt: now,
+      carrier,
+      trackingNumber,
+      verifiedCarrierSlug: result.detectedCarrier || null, // what AfterShip actually detected, vs. the seller's dropdown pick
+      shipmentVerifiedAt: now,
+      ...(transferId ? { transferId } : {}),
+    });
+  }
+  await batch.commit();
 
-  return { verified: true };
+  return { verified: true, itemCount: orders.length };
 });
 
 module.exports = { submitShipment: exports.submitShipment };

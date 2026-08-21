@@ -4,6 +4,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
 const Stripe = require("stripe");
 const { shippingCentsFor, computeShipDeadline } = require("./shipping");
+const { generateReceiptCode } = require("./receipt");
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const db = getFirestore();
@@ -178,6 +179,7 @@ async function markOrderPaid(paymentIntent) {
     shouldDeletePhotos = true;
     tx.set(db.collection("orders").doc(), {
       listingId,
+      receiptCode: generateReceiptCode(),
       listing: {
         brand: brand || "",
         title: title || "",

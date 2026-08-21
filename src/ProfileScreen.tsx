@@ -25,7 +25,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { COLOR, SERIF, SANS, cssBackground } from "./theme";
-import { useUserListings, type Listing } from "./data/listings";
+import { useUserListings, deleteListing, type Listing } from "./data/listings";
 import { useUserOrders, submitShipment, cancelOrder, type Order } from "./data/orders";
 import { useWithdrawals, requestWithdrawal, useLiveSellerBalance, computeTransactionHistory } from "./data/wallet";
 import { getPreference, setPreference, exportLocalData, clearLocalData } from "./data/localStore";
@@ -33,6 +33,9 @@ import { exportServerData, deleteServerAccount } from "./data/account";
 import { useSellerPaymentStatus, getStripeOnboardingUrl, refreshStripeStatus } from "./data/sellerPayments";
 import { useUserAddress } from "./data/address";
 import AddressSetup from "./AddressSetup";
+import ReceiptDetail from "./ReceiptDetail";
+import DataDisclosure from "./DataDisclosure";
+import LegalViewer from "./legal/LegalViewer";
 import { useAuth } from "./context/AuthContext";
 import { useLanguage } from "./i18n/LanguageContext";
 
@@ -297,12 +300,31 @@ function ActivityRow({
 
 const CARRIERS = ["DHL", "Hermes", "DPD", "UPS", "GLS", "Deutsche Post"];
 
+const BUNDESLANDER = [
+  "Baden-Württemberg",
+  "Bayern",
+  "Berlin",
+  "Brandenburg",
+  "Bremen",
+  "Hamburg",
+  "Hessen",
+  "Mecklenburg-Vorpommern",
+  "Niedersachsen",
+  "Nordrhein-Westfalen",
+  "Rheinland-Pfalz",
+  "Saarland",
+  "Sachsen",
+  "Sachsen-Anhalt",
+  "Schleswig-Holstein",
+  "Thüringen",
+];
+
 function ShipPackageForm({
-  order,
+  orders,
   onDone,
   t,
 }: {
-  order: Order;
+  orders: Order[];
   onDone: () => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
@@ -312,6 +334,10 @@ function ShipPackageForm({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const groupId = orders[0]?.cartGroupId;
+  const isGroup = orders.length > 1 && groupId;
+  const totalPrice = orders.reduce((sum, o) => sum + o.listing.price, 0);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!carrier) return setError(t("shipping.errorMissingCarrier"));
@@ -319,7 +345,8 @@ function ShipPackageForm({
     setError("");
     setBusy(true);
     try {
-      await submitShipment(order.id, carrier, tracking.trim());
+      const target = isGroup ? { cartGroupId: groupId! } : { orderId: orders[0].id };
+      await submitShipment(target, carrier, tracking.trim());
       setSuccess(true);
       setTimeout(onDone, 1800);
     } catch (err: any) {
@@ -365,9 +392,28 @@ function ShipPackageForm({
         >
           <Package size={20} color={COLOR.oxblood} strokeWidth={1.8} />
         </div>
-        <p style={{ fontFamily: SERIF, fontSize: 19, color: COLOR.ink, margin: "0 0 4px" }}>
-          {order.listing.brand} {order.listing.title}
-        </p>
+
+        {isGroup ? (
+          <>
+            <p style={{ fontFamily: SERIF, fontSize: 19, color: COLOR.ink, margin: "0 0 4px" }}>
+              {t("cart.itemsInPackage", { count: orders.length })}
+            </p>
+            <div style={{ margin: "0 0 16px" }}>
+              {orders.map((o) => (
+                <div key={o.id} style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, padding: "2px 0" }}>
+                  {o.listing.brand} {o.listing.title} — €{o.listing.price}
+                </div>
+              ))}
+              <div style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 700, color: COLOR.ink, marginTop: 6, paddingTop: 6, borderTop: `0.5px solid ${COLOR.lineSoft}` }}>
+                {t("shipping.total")}: €{totalPrice}
+              </div>
+            </div>
+          </>
+        ) : (
+          <p style={{ fontFamily: SERIF, fontSize: 19, color: COLOR.ink, margin: "0 0 4px" }}>
+            {orders[0]?.listing.brand} {orders[0]?.listing.title}
+          </p>
+        )}
         <p style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, margin: "0 0 20px" }}>{t("shipping.shipPackage")}</p>
 
         {success ? (
@@ -430,12 +476,16 @@ export default function ProfileScreen({
   const [showTransactions, setShowTransactions] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [radius, setRadius] = useState(5);
+  const [bundesland, setBundesland] = useState("Baden-Württemberg");
   const [downloading, setDownloading] = useState(false);
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [showReceipts, setShowReceipts] = useState(false);
   const [editAddress, setEditAddress] = useState(false);
-  const [shippingOrderId, setShippingOrderId] = useState<string | null>(null);
+  const [shippingGroupKey, setShippingGroupKey] = useState<string | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<{ order: Order; role: "buyer" | "seller" } | null>(null);
+  const [showDisclosure, setShowDisclosure] = useState(false);
+  const [showPrivacyDoc, setShowPrivacyDoc] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
   const [paymentOpening, setPaymentOpening] = useState(false);
@@ -464,11 +514,17 @@ export default function ProfileScreen({
 
   useEffect(() => {
     getPreference("searchRadiusKm", 5).then(setRadius);
+    getPreference("bundesland", "Baden-Württemberg").then(setBundesland);
   }, []);
 
   const changeRadius = (value: number) => {
     setRadius(value);
     setPreference("searchRadiusKm", value);
+  };
+
+  const changeBundesland = (value: string) => {
+    setBundesland(value);
+    setPreference("bundesland", value);
   };
 
   const handleDownloadData = async () => {
@@ -525,6 +581,12 @@ export default function ProfileScreen({
     title: `${l.brand} ${l.title}`.trim(),
     price: l.price,
     note: t("profile.noteLive"),
+    secondaryLabel: t("profile.deleteListing"),
+    onSecondary: () => {
+      if (window.confirm(t("profile.deleteListingConfirm"))) {
+        deleteListing(l);
+      }
+    },
   }));
 
   const noteForSellerOrder = (o: Order) => {
@@ -557,28 +619,40 @@ export default function ProfileScreen({
   }));
 
   // The seller's "needs action" queue — orders they've been paid for but
-  // haven't shipped yet. Ship package opens the tracking-submission screen;
-  // Cancel is still available if they can't fulfill it.
-  const pickup: DisplayItem[] = asSeller
-    .filter((o) => o.status === "awaiting_shipment")
-    .map((o) => {
-      const overdue = o.shipByAt != null && Date.now() > o.shipByAt;
-      return {
-        id: o.id,
-        image: o.listing.image,
-        title: `${o.listing.brand} ${o.listing.title}`.trim(),
-        price: o.sellerEarned ?? 0,
-        note: overdue
-          ? t("shipping.deadlinePassed")
-          : o.shipByAt
-          ? t("shipping.shipByLabel", { date: new Date(o.shipByAt).toLocaleDateString() })
-          : t("profile.noteAwaitingShipment"),
-        actionLabel: t("shipping.shipPackage"),
-        onAction: () => setShippingOrderId(o.id),
-        secondaryLabel: t("profile.cancel"),
-        onSecondary: () => cancelOrder(o.id),
-      };
-    });
+  // haven't shipped yet, grouped by cartGroupId so items bought together
+  // from the same seller show as one row with one Ship package action
+  // ("1 seller · 1 package"), not N separate ones. Cancel is still
+  // available per-group if they can't fulfill it.
+  const pickupGroups = new Map<string, Order[]>();
+  for (const o of asSeller.filter((x) => x.status === "awaiting_shipment")) {
+    const key = o.cartGroupId || o.id;
+    if (!pickupGroups.has(key)) pickupGroups.set(key, []);
+    pickupGroups.get(key)!.push(o);
+  }
+
+  const pickup: DisplayItem[] = Array.from(pickupGroups.entries()).map(([key, group]) => {
+    const first = group[0];
+    const overdue = first.shipByAt != null && Date.now() > first.shipByAt;
+    const totalEarned = group.reduce((sum, o) => sum + (o.sellerEarned ?? 0), 0);
+    return {
+      id: key,
+      image: first.listing.image,
+      title:
+        group.length > 1
+          ? t("cart.itemsInPackage", { count: group.length })
+          : `${first.listing.brand} ${first.listing.title}`.trim(),
+      price: totalEarned,
+      note: overdue
+        ? t("shipping.deadlinePassed")
+        : first.shipByAt
+        ? t("shipping.shipByLabel", { date: new Date(first.shipByAt).toLocaleDateString() })
+        : t("profile.noteAwaitingShipment"),
+      actionLabel: t("shipping.shipPackage"),
+      onAction: () => setShippingGroupKey(key),
+      secondaryLabel: t("profile.cancel"),
+      onSecondary: () => group.forEach((o) => cancelOrder(o.id)),
+    };
+  });
 
   const handoffsInvolved = [...asBuyer, ...asSeller];
   const successfulHandoffs = handoffsInvolved.filter((o) => o.status === "completed").length;
@@ -597,21 +671,46 @@ export default function ProfileScreen({
 
   const { address } = useUserAddress(user?.uid);
 
+  if (showPrivacyDoc) {
+    return <LegalViewer docKey="privacy" onBack={() => setShowPrivacyDoc(false)} />;
+  }
+
+  if (showDisclosure) {
+    return <DataDisclosure onBack={() => setShowDisclosure(false)} onOpenPrivacyPolicy={() => setShowPrivacyDoc(true)} />;
+  }
+
   if (editAddress) {
     return <AddressSetup initialAddress={address} onSaved={() => setEditAddress(false)} onCancel={() => setEditAddress(false)} />;
   }
 
-  if (shippingOrderId) {
-    const shippingOrder = asSeller.find((o) => o.id === shippingOrderId);
-    if (shippingOrder) {
-      return <ShipPackageForm order={shippingOrder} onDone={() => setShippingOrderId(null)} t={t} />;
+  if (shippingGroupKey) {
+    const shippingOrders = asSeller.filter(
+      (o) => o.status === "awaiting_shipment" && (o.cartGroupId || o.id) === shippingGroupKey
+    );
+    if (shippingOrders.length > 0) {
+      return <ShipPackageForm orders={shippingOrders} onDone={() => setShippingGroupKey(null)} t={t} />;
     }
   }
 
   const displayName = user?.displayName || user?.email?.split("@")[0] || "You";
 
   if (showReceipts) {
-    const receipts = buying.filter((b) => b.note !== t("profile.noteCancelled"));
+    const receiptOrders = [
+      ...asBuyer.filter((o) => o.status !== "cancelled").map((o) => ({ order: o, role: "buyer" as const })),
+      ...asSeller.filter((o) => o.status !== "cancelled").map((o) => ({ order: o, role: "seller" as const })),
+    ].sort((a, b) => b.order.createdAt - a.order.createdAt);
+
+    if (selectedReceipt) {
+      return (
+        <ReceiptDetail
+          order={selectedReceipt.order}
+          role={selectedReceipt.role}
+          sellerId={selectedReceipt.role === "seller" ? user?.uid : selectedReceipt.order.sellerId}
+          onBack={() => setSelectedReceipt(null)}
+        />
+      );
+    }
+
     return (
       <div style={{ paddingBottom: 24 }}>
         <div
@@ -645,7 +744,7 @@ export default function ProfileScreen({
           <span style={{ width: 22 }} />
         </div>
 
-        {receipts.length === 0 ? (
+        {receiptOrders.length === 0 ? (
           <div style={{ padding: "60px 24px", textAlign: "center" }}>
             <Receipt size={26} color={COLOR.inkSoft} strokeWidth={1.4} />
             <p style={{ fontFamily: SERIF, fontSize: 16, color: COLOR.ink, margin: "12px 0 6px" }}>
@@ -655,25 +754,57 @@ export default function ProfileScreen({
           </div>
         ) : (
           <div style={{ padding: "8px 18px 0" }}>
-            {receipts.map((r) => (
-              <div
-                key={r.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "14px 0",
-                  borderBottom: `0.5px solid ${COLOR.lineSoft}`,
-                }}
-              >
-                <div style={{ width: 44, height: 44, borderRadius: 8, background: cssBackground(r.image), flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: COLOR.ink }}>{r.title}</div>
-                  <div style={{ fontFamily: SANS, fontSize: 11.5, color: COLOR.inkSoft }}>{r.note}</div>
-                </div>
-                <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: COLOR.ink }}>€{r.price}</div>
-              </div>
-            ))}
+            {receiptOrders.map(({ order, role }) => {
+              const isSellerAwaiting = role === "seller" && order.status === "awaiting_shipment";
+              return (
+                <button
+                  key={`${role}-${order.id}`}
+                  onClick={() => setSelectedReceipt({ order, role })}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "14px 0",
+                    borderBottom: `0.5px solid ${COLOR.lineSoft}`,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ width: 44, height: 44, borderRadius: 8, background: cssBackground(order.listing.image), flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: COLOR.ink }}>
+                      {order.listing.brand} {order.listing.title}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                      {isSellerAwaiting && (
+                        <span
+                          style={{
+                            background: "#2E6B4F",
+                            color: "#fff",
+                            fontFamily: SANS,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            letterSpacing: "0.03em",
+                            padding: "2px 6px",
+                            borderRadius: 8,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {t("shipping.awaitingShipment")}
+                        </span>
+                      )}
+                      <span style={{ fontFamily: SANS, fontSize: 11.5, color: COLOR.inkSoft }}>
+                        {role === "buyer" ? t("profile.purchased") : t("profile.sold")}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: COLOR.ink }}>€{order.listing.price}</div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -882,10 +1013,29 @@ export default function ProfileScreen({
       {/* Area */}
       <Section icon={<MapPin size={15} color={COLOR.ink} strokeWidth={1.6} />} title={t("profile.yourArea")}>
         <div style={{ padding: "14px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft }}>{t("profile.currentArea")}</span>
-            <span style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 600, color: COLOR.ink }}>Stuttgart</span>
-          </div>
+          <p style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, margin: "0 0 6px" }}>{t("profile.currentArea")}</p>
+          <select
+            value={bundesland}
+            onChange={(e) => changeBundesland(e.target.value)}
+            style={{
+              width: "100%",
+              border: `0.5px solid ${COLOR.line}`,
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontFamily: SANS,
+              fontSize: 13,
+              fontWeight: 600,
+              color: COLOR.ink,
+              background: "#fff",
+              marginBottom: 4,
+            }}
+          >
+            {BUNDESLANDER.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, marginBottom: 6 }}>
             <span style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft }}>{t("profile.searchRadius")}</span>
             <span style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 600, color: COLOR.ink }}>{radius} km</span>
@@ -980,7 +1130,7 @@ export default function ProfileScreen({
           value={address?.verified ? address.city : undefined}
           onClick={() => setEditAddress(true)}
         />
-        <Row label={t("profile.privacy")} onClick={() => {}} />
+        <Row label={t("profile.privacy")} onClick={() => setShowDisclosure(true)} />
         <Row label={t("profile.helpSupport")} onClick={() => {}} />
         <Row label={t("profile.terms")} onClick={() => {}} showChevron={false} />
       </Section>

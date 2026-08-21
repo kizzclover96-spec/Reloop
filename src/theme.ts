@@ -1,12 +1,17 @@
+// Minimalist palette: white background, black ink for icons/text/shapes,
+// blue as the one accent color (links, "see more", selected states). Kept
+// the same key names (oxblood/oxbloodSoft) rather than renaming them
+// everywhere they're used — they're the "accent" slot, just repointed from
+// the old ivory/oxblood aesthetic to blue.
 export const COLOR = {
-  bg: "#FAF7F1",
+  bg: "#FFFFFF",
   card: "#FFFFFF",
-  ink: "#1C1A17",
-  inkSoft: "#6E6A62",
-  line: "#E7E2D6",
-  lineSoft: "#F0ECE1",
-  oxblood: "#6E2632",
-  oxbloodSoft: "#F3E4E4",
+  ink: "#111111",
+  inkSoft: "#6B6B6B",
+  line: "#E5E5E5",
+  lineSoft: "#F5F5F5",
+  oxblood: "#2563EB", // accent — blue, used for links/"see more"/selected states
+  oxbloodSoft: "#EFF6FF", // light accent background tint
   gold: "#B08A4E",
 } as const;
 

@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import { ChevronLeft } from "lucide-react";
-import { COLOR, SERIF, SANS, cssBackground } from "./theme";
+import { COLOR, SERIF, SANS } from "./theme";
 import { useLanguage } from "./i18n/LanguageContext";
 import { getStripe } from "./stripeClient";
-import { createCheckoutIntent } from "./data/orders";
-import { buyerPrice } from "./utils/price";
-import { shippingCostFor } from "./utils/shipping";
-import type { Listing } from "./data/listings";
+import { createCartCheckoutIntent } from "./data/cart";
+import { PayForm } from "./Checkout";
 
-interface CheckoutProps {
-  product: Listing;
+interface CartCheckoutProps {
+  listingIds: string[];
   buyerName: string;
+  total: number; // display only — the real charge amount is computed and set server-side
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -20,18 +19,17 @@ const ERROR_KEYS: Record<string, string> = {
   SELLER_NOT_READY: "checkout.sellerNotReadyBody",
   ITEM_UNAVAILABLE: "checkout.itemUnavailable",
   OWN_LISTING: "checkout.ownListing",
+  CART_EMPTY: "cart.empty",
 };
 
-export default function Checkout({ product, buyerName, onClose, onSuccess }: CheckoutProps) {
+export default function CartCheckout({ listingIds, buyerName, total, onClose, onSuccess }: CartCheckoutProps) {
   const { t } = useLanguage();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
-  const shippingCost = shippingCostFor(product.packageSize);
-  const total = buyerPrice(product) + shippingCost;
 
   useEffect(() => {
     let cancelled = false;
-    createCheckoutIntent(product.id, buyerName)
+    createCartCheckoutIntent(listingIds, buyerName)
       .then((secret) => {
         if (!cancelled) setClientSecret(secret);
       })
@@ -44,7 +42,8 @@ export default function Checkout({ product, buyerName, onClose, onSuccess }: Che
     return () => {
       cancelled = true;
     };
-  }, [product.id, buyerName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const overlay = (children: React.ReactNode) => (
     <div
@@ -124,26 +123,9 @@ export default function Checkout({ product, buyerName, onClose, onSuccess }: Che
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 10, background: cssBackground(product.images[0]), flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: COLOR.ink }}>
-              {product.brand} {product.title}
-            </div>
-            <div style={{ fontFamily: SANS, fontSize: 12, color: COLOR.inkSoft }}>{product.size}</div>
-          </div>
-          <div style={{ fontFamily: SANS, fontSize: 15, fontWeight: 700, color: COLOR.ink }}>€{buyerPrice(product)}</div>
-        </div>
-
-        <div style={{ padding: "10px 0 20px", borderBottom: `0.5px solid ${COLOR.lineSoft}`, marginBottom: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontFamily: SANS, fontSize: 12, color: COLOR.inkSoft }}>{t("shipping.costLabel")}</span>
-            <span style={{ fontFamily: SANS, fontSize: 12, color: COLOR.inkSoft }}>€{shippingCost.toFixed(2)}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: COLOR.ink }}>{t("shipping.total")}</span>
-            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: COLOR.ink }}>€{total.toFixed(2)}</span>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 0 16px", borderBottom: `0.5px solid ${COLOR.lineSoft}`, marginBottom: 16 }}>
+          <span style={{ fontFamily: SANS, fontSize: 13, color: COLOR.inkSoft }}>{t("cart.itemCount", { count: listingIds.length })}</span>
+          <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 700, color: COLOR.ink }}>€{total.toFixed(2)}</span>
         </div>
 
         <Elements
@@ -166,68 +148,5 @@ export default function Checkout({ product, buyerName, onClose, onSuccess }: Che
         </Elements>
       </div>
     </div>
-  );
-}
-
-export function PayForm({ amount, onSuccess }: { amount: number; onSuccess: () => void }) {
-  const { t } = useLanguage();
-  const stripe = useStripe();
-  const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
-  const [payError, setPayError] = useState("");
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setSubmitting(true);
-    setPayError("");
-
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
-
-    if (error) {
-      setPayError(error.message || t("checkout.genericError"));
-      setSubmitting(false);
-      return;
-    }
-    if (paymentIntent?.status === "succeeded") {
-      onSuccess();
-    } else {
-      // Some methods (e.g. certain bank redirects) can leave the intent in
-      // "processing" — not modeled further here since this app's payment
-      // methods (card, Apple Pay, Google Pay) resolve synchronously.
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit}>
-      <PaymentElement />
-      {payError && (
-        <p style={{ fontFamily: SANS, fontSize: 12, color: "#B23A3A", marginTop: 12 }}>{payError}</p>
-      )}
-      <button
-        type="submit"
-        disabled={!stripe || submitting}
-        style={{
-          width: "100%",
-          marginTop: 20,
-          background: COLOR.ink,
-          color: "#fff",
-          border: "none",
-          borderRadius: 28,
-          padding: "16px",
-          fontFamily: SANS,
-          fontSize: 14.5,
-          fontWeight: 700,
-          cursor: submitting ? "default" : "pointer",
-          opacity: submitting || !stripe ? 0.7 : 1,
-        }}
-      >
-        {submitting ? t("checkout.processing") : t("checkout.pay", { amount })}
-      </button>
-    </form>
   );
 }

@@ -14,8 +14,11 @@ import {
   Grid3x3,
   Glasses,
   AlertCircle,
+  ShoppingCart,
 } from "lucide-react";
 import { COLOR, SERIF, SANS, cssBackground } from "./theme";
+import { useCart } from "./context/CartContext";
+import Cart from "./Cart";
 import { useAuth } from "./context/AuthContext";
 import {
   useListings,
@@ -27,8 +30,9 @@ import {
   MAX_PHOTOS_PER_LISTING,
   MAX_ACTIVE_LISTINGS_PER_USER,
 } from "./data/listings";
-import { logRecentlyViewed } from "./data/localStore";
+import { logRecentlyViewed, getPreference } from "./data/localStore";
 import { GIVEAWAY_PRICE_EUR, buyerPrice } from "./utils/price";
+import { sanitizeText } from "./utils/sanitize";
 import { PACKAGE_SIZES, shippingCostFor } from "./utils/shipping";
 import { useLanguage } from "./i18n/LanguageContext";
 import LanguageSwitcher from "./i18n/LanguageSwitcher";
@@ -232,7 +236,7 @@ function TopBar({ title, onBack, right }) {
 /* ---------------------------------------------------------------
    Home
 --------------------------------------------------------------- */
-function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, onSelectProduct, onSearch }) {
+function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, onSelectProduct, onSearch, onOpenCart, cartCount }) {
   const { t } = useLanguage();
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchInput, setSearchInput] = useState("");
@@ -286,6 +290,35 @@ function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, 
         </form>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <LanguageSwitcher />
+          <button
+            onClick={onOpenCart}
+            aria-label={t("cart.title")}
+            style={{ position: "relative", background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
+          >
+            <ShoppingCart size={19} color={COLOR.ink} strokeWidth={1.6} />
+            {cartCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -6,
+                  right: -7,
+                  background: COLOR.oxblood,
+                  color: "#fff",
+                  fontFamily: SANS,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  borderRadius: "50%",
+                  width: 16,
+                  height: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {cartCount}
+              </span>
+            )}
+          </button>
           <Bell size={19} color={COLOR.ink} strokeWidth={1.6} />
         </div>
       </div>
@@ -901,20 +934,21 @@ function ListScreen({ user, listings }) {
     setError("");
     setSubmitting(true);
     try {
+      const bundesland = await getPreference("bundesland", "Baden-Württemberg");
       await createListing(
         draftId,
         {
           brand: "",
-          title: title.trim(),
+          title: sanitizeText(title.trim(), 120),
           category,
           size: "One size",
-          location: "Stuttgart, DE",
+          location: `${bundesland}, DE`,
           price: giveaway ? 0 : Number(selling),
           was: retail ? Number(retail) : undefined,
           condition: "Good condition",
           images: readyImages,
           ratio: "1 / 1",
-          description: desc || undefined,
+          description: desc ? sanitizeText(desc, 1000) : undefined,
           giveaway,
           packageSize,
         },
@@ -1479,6 +1513,8 @@ export default function App() {
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [stripeReturn, setStripeReturn] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const { itemIds: cartItemIds } = useCart();
   const isMobile = useIsMobile();
 
   // Stripe Connect onboarding redirects back here with ?stripe_return=1 (finished,
@@ -1554,6 +1590,8 @@ export default function App() {
   const screen = selectedProduct ? (
     <ProductView
       product={selectedProduct}
+      listings={listings}
+      onSelectProduct={openProduct}
       isSaved={favourites.has(selectedProduct.id)}
       onToggleSave={() => toggleFav(selectedProduct.id)}
       onBack={() => setSelectedId(null)}
@@ -1570,6 +1608,8 @@ export default function App() {
           goShop={goShop}
           onSelectProduct={openProduct}
           onSearch={goSearch}
+          onOpenCart={() => setShowCart(true)}
+          cartCount={cartItemIds.length}
         />
       ),
       shop: (
@@ -1623,6 +1663,9 @@ export default function App() {
     </>
   );
 
+  const cartBuyer = user ? { uid: user.uid, name: user.displayName || user.email?.split("@")[0] || "You" } : null;
+  const cartOverlay = showCart && <Cart listings={listings} buyer={cartBuyer} onClose={() => setShowCart(false)} />;
+
   if (isMobile) {
     return (
       <div
@@ -1637,6 +1680,7 @@ export default function App() {
       >
         {FONT_LINK}
         {body}
+        {cartOverlay}
       </div>
     );
   }
@@ -1673,6 +1717,7 @@ export default function App() {
         />
         <div style={{ height: 40, flexShrink: 0 }} />
         {body}
+        {cartOverlay}
       </div>
     </div>
   );

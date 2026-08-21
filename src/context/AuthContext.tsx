@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  OAuthProvider,
   signOut,
   updateProfile,
   type User,
@@ -17,6 +18,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithYahoo: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -49,12 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithPopup(auth, new GoogleAuthProvider());
   };
 
+  // Yahoo isn't a built-in Firebase provider like Google — it's added via
+  // the generic OAuthProvider with Yahoo's provider id. This requires
+  // enabling "Yahoo" under Firebase Console → Authentication → Sign-in
+  // method → Add new provider → OpenID Connect / Yahoo, with a client ID
+  // and secret from Yahoo's developer console (developer.yahoo.com).
+  const signInWithYahoo = async () => {
+    await signInWithPopup(auth, new OAuthProvider("yahoo.com"));
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithYahoo, logout }}>
       {children}
     </AuthContext.Provider>
   );

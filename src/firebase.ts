@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
@@ -25,11 +25,24 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
-// Session-only persistence: the auth session lives in sessionStorage and is
+// Session-only by default: the auth session lives in sessionStorage and is
 // gone the moment the tab/window closes — never sits indefinitely in
 // localStorage the way Firebase's default (browserLocalPersistence) does.
-// Trade-off: signing in is required again each new browser session, even
-// without an explicit log out — a deliberate security choice, not a bug.
+// A signed-in user can opt into staying signed in via the "Remember me"
+// toggle on the login screen (see setRememberMe below) — this default is
+// the safe starting point, not a hard rule.
 setPersistence(auth, browserSessionPersistence).catch((err) => {
   console.error("Failed to set auth persistence:", err);
 });
+
+/**
+ * Called from the "Remember me" toggle before signing in/up. Must be set
+ * before the actual sign-in call for it to take effect on that session.
+ */
+export async function setRememberMe(remember: boolean) {
+  try {
+    await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+  } catch (err) {
+    console.error("Failed to update auth persistence:", err);
+  }
+}

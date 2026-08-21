@@ -10,6 +10,21 @@ const { moderateListing } = require("./moderation");
 initializeApp();
 const db = getFirestore();
 
+/**
+ * Server-side mirror of src/utils/sanitize.ts. Client-side sanitization is
+ * a UX nicety, not a security boundary — a request can always be sent
+ * directly, bypassing the client entirely, so anything user-submitted gets
+ * cleaned again here before it's actually written.
+ */
+function sanitizeText(input, maxLength = 2000) {
+  if (typeof input !== "string" || !input) return "";
+  return input
+    .replace(/[<>]/g, "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim()
+    .slice(0, maxLength);
+}
+
 // Keep these in sync with src/data/listings.ts — the client enforces the same
 // numbers for a good UX, but these are the versions that actually can't be bypassed.
 const MAX_PHOTOS_PER_LISTING = 5;
@@ -136,7 +151,10 @@ exports.createListing = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 60 }
 
   await db.collection("listings").doc(id).set({
     ...data,
-    seller,
+    title: sanitizeText(data.title, 120),
+    description: data.description ? sanitizeText(data.description, 1000) : undefined,
+    brand: sanitizeText(data.brand || "", 60),
+    seller: seller ? { ...seller, name: sanitizeText(seller.name || "", 60) } : seller,
     sellerId: uid,
     status: "active",
     createdAt: Date.now(),
@@ -299,10 +317,18 @@ exports.createPaymentIntent = checkout.createPaymentIntent;
 const address = require("./address");
 exports.verifyAddress = address.verifyAddress;
 
-// Shipment submission + verification (carrier check is currently STUBBED — see submitShipment.js)
+// Shipment submission + verification (real carrier check via AfterShip — see submitShipment.js)
 const submitShipment = require("./submitShipment");
 exports.submitShipment = submitShipment.submitShipment;
 
 // Seller wallet — reads the real Stripe Connect balance
 const getSellerBalance = require("./getSellerBalance");
 exports.getSellerBalance = getSellerBalance.getSellerBalance;
+
+// Multi-item cart checkout — see cartCheckout.js
+const cartCheckout = require("./cartCheckout");
+exports.createCartPaymentIntent = cartCheckout.createCartPaymentIntent;
+
+// Order cancellation with a real Stripe refund — see cancelOrder.js
+const cancelOrderFn = require("./cancelOrder");
+exports.cancelOrder = cancelOrderFn.cancelOrder;

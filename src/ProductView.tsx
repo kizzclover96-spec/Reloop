@@ -1,14 +1,17 @@
 import React, { useState } from "react";
-import { ChevronLeft, Bookmark, Share2, Star, ShieldCheck, CheckCircle2, Check } from "lucide-react";
+import { ChevronLeft, Bookmark, Share2, Star, ShieldCheck, CheckCircle2, Check, ShoppingCart } from "lucide-react";
 import { COLOR, SERIF, SANS, cssBackground, cssBackgroundContain } from "./theme";
 import type { Listing } from "./data/listings";
 import { useLanguage } from "./i18n/LanguageContext";
 import { buyerPrice } from "./utils/price";
 import { shippingCostFor } from "./utils/shipping";
+import { useCart } from "./context/CartContext";
 import Checkout from "./Checkout";
 
 export interface ProductViewProps {
   product: Listing;
+  listings?: Listing[];
+  onSelectProduct?: (id: string) => void;
   isSaved: boolean;
   onToggleSave: () => void;
   onBack: () => void;
@@ -48,7 +51,7 @@ function RoundButton({
   );
 }
 
-export default function ProductView({ product, isSaved, onToggleSave, onBack, buyer }: ProductViewProps) {
+export default function ProductView({ product, listings = [], onSelectProduct, isSaved, onToggleSave, onBack, buyer }: ProductViewProps) {
   const { t } = useLanguage();
   const [imgIndex, setImgIndex] = useState(0);
   const [error, setError] = useState("");
@@ -58,7 +61,16 @@ export default function ProductView({ product, isSaved, onToggleSave, onBack, bu
   const sold = product.status === "sold";
   const isOwnListing = buyer?.uid === product.sellerId;
   const price = buyerPrice(product);
+  const moreFromSeller = listings.filter((l) => l.sellerId === product.sellerId && l.id !== product.id && l.status === "active").slice(0, 6);
   const shippingCost = shippingCostFor(product.packageSize);
+  const { addItem, has } = useCart();
+  const [addedToast, setAddedToast] = useState(false);
+
+  const handleAddToCart = () => {
+    addItem(product.id);
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 1800);
+  };
 
   const handleShare = async () => {
     const url = `${window.location.origin}${window.location.pathname}?item=${product.id}`;
@@ -95,7 +107,7 @@ export default function ProductView({ product, isSaved, onToggleSave, onBack, bu
     setJustPaid(true);
     // The listing flips to "sold" once the webhook processes the payment —
     // usually near-instant, but not guaranteed to have landed by the time
-    // this callback fires, so this local flag covers the gap.
+    // this callback fires, so justPaid covers that gap in the price/button area.
   };
 
   return (
@@ -281,13 +293,38 @@ export default function ProductView({ product, isSaved, onToggleSave, onBack, bu
             </div>
           )}
         </div>
-      </div>
 
-      {justPaid && !sold && (
-        <p style={{ fontFamily: SANS, fontSize: 12, color: "#2E6B4F", padding: "0 18px 8px", margin: 0 }}>
-          {t("checkout.successBody")}
-        </p>
-      )}
+        {moreFromSeller.length > 0 && (
+          <div style={{ marginTop: 22 }}>
+            <p style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, letterSpacing: "0.04em", color: COLOR.ink, marginBottom: 10 }}>
+              {t("product.moreFromSeller")}
+            </p>
+            <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+              {moreFromSeller.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onSelectProduct?.(item.id)}
+                  style={{
+                    flexShrink: 0,
+                    width: 92,
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: onSelectProduct ? "pointer" : "default",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ width: 92, height: 92, borderRadius: 10, background: cssBackground(item.images[0]), marginBottom: 6 }} />
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: COLOR.ink, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {item.brand} {item.title}
+                  </div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: COLOR.inkSoft }}>€{buyerPrice(item)}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {error && (
         <p style={{ fontFamily: SANS, fontSize: 12, color: "#B23A3A", padding: "0 18px 8px", margin: 0 }}>{error}</p>
@@ -296,6 +333,64 @@ export default function ProductView({ product, isSaved, onToggleSave, onBack, bu
         <p style={{ fontFamily: SANS, fontSize: 11.5, color: COLOR.inkSoft, padding: "0 18px 8px", margin: 0 }}>
           {t("product.ownListing")}
         </p>
+      )}
+
+      {justPaid && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(20,18,15,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 70,
+            padding: 24,
+          }}
+        >
+          <div style={{ background: COLOR.card, borderRadius: 16, padding: 28, maxWidth: 300, textAlign: "center" }}>
+            <div
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                background: "#E3F0E8",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 14px",
+              }}
+            >
+              <Check size={22} color="#2E6B4F" strokeWidth={2.2} />
+            </div>
+            <p style={{ fontFamily: SERIF, fontSize: 17, color: COLOR.ink, margin: "0 0 8px" }}>
+              {t("checkout.paymentSuccessTitle")}
+            </p>
+            <p style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, margin: "0 0 20px" }}>
+              {t("checkout.paymentSuccessBody")}
+            </p>
+            <button
+              onClick={() => {
+                setJustPaid(false);
+                onBack();
+              }}
+              style={{
+                width: "100%",
+                background: COLOR.ink,
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "12px",
+                fontFamily: SANS,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {t("checkout.gotIt")}
+            </button>
+          </div>
+        </div>
       )}
 
       <div
@@ -309,37 +404,79 @@ export default function ProductView({ product, isSaved, onToggleSave, onBack, bu
           justifyContent: "center",
         }}
       >
-        <button
-          onClick={handleBuy}
-          disabled={sold || isOwnListing}
+        <div style={{ width: "100%", maxWidth: 320, display: "flex", gap: 10 }}>
+          {!sold && !isOwnListing && (
+            <button
+              onClick={handleAddToCart}
+              aria-label={t("cart.addToCart")}
+              style={{
+                flexShrink: 0,
+                width: 54,
+                border: `1.5px solid ${COLOR.ink}`,
+                background: "none",
+                borderRadius: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: has(product.id) ? "#2E6B4F" : COLOR.ink,
+              }}
+            >
+              {has(product.id) ? <Check size={18} /> : <ShoppingCart size={18} />}
+            </button>
+          )}
+          <button
+            onClick={handleBuy}
+            disabled={sold || isOwnListing}
+            style={{
+              flex: 1,
+              border: "none",
+              background: sold ? "#2E6B4F" : COLOR.ink,
+              borderRadius: 28,
+              padding: "17px",
+              fontFamily: SANS,
+              fontSize: 15,
+              fontWeight: 700,
+              color: "#fff",
+              cursor: sold || isOwnListing ? "default" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              opacity: isOwnListing ? 0.7 : 1,
+            }}
+          >
+            {sold ? (
+              <>
+                <Check size={16} /> {t("product.sold")}
+              </>
+            ) : (
+              t("product.buyNow")
+            )}
+          </button>
+        </div>
+      </div>
+
+      {addedToast && (
+        <div
           style={{
-            width: "100%",
-            maxWidth: 320,
-            border: "none",
-            background: sold ? "#2E6B4F" : COLOR.ink,
-            borderRadius: 28,
-            padding: "17px",
-            fontFamily: SANS,
-            fontSize: 15,
-            fontWeight: 700,
+            position: "fixed",
+            bottom: 100,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(20,18,15,0.85)",
             color: "#fff",
-            cursor: sold || isOwnListing ? "default" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            opacity: isOwnListing ? 0.7 : 1,
+            fontFamily: SANS,
+            fontSize: 12,
+            fontWeight: 600,
+            padding: "8px 16px",
+            borderRadius: 20,
+            zIndex: 65,
           }}
         >
-          {sold ? (
-            <>
-              <Check size={16} /> {t("product.sold")}
-            </>
-          ) : (
-            t("product.buyNow")
-          )}
-        </button>
-      </div>
+          {t("cart.addedToCart")}
+        </div>
+      )}
 
       {showCheckout && buyer && (
         <Checkout

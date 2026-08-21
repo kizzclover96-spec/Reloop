@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, doc, onSnapshot, query, where, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 
@@ -24,6 +24,7 @@ export interface OrderShippingAddress {
 export interface Order {
   id: string;
   listingId: string;
+  receiptCode: string;
   listing: ListingSnapshot;
   buyerId: string;
   buyerName: string;
@@ -47,6 +48,8 @@ export interface Order {
   carrier?: string;
   trackingNumber?: string;
   shipmentVerifiedAt?: number;
+  /** Orders from the same seller in one cart checkout share this — they ship as one package. */
+  cartGroupId?: string;
   transferId?: string;
 }
 
@@ -71,17 +74,27 @@ export async function createCheckoutIntent(listingId: string, buyerName: string)
 /**
  * Seller submits a tracking number for an order. If (stub-)verified, this
  * is also the moment their cut actually leaves Reloop's platform Stripe
- * balance — see functions/submitShipment.js for the real mechanics and its
- * honest disclosure that carrier verification isn't wired up to a real API yet.
+ * balance — see functions/submitShipment.js for the real mechanics (real
+ * carrier verification via AfterShip, not a stub).
  */
-export async function submitShipment(orderId: string, carrier: string, trackingNumber: string) {
+export async function submitShipment(
+  target: { orderId: string } | { cartGroupId: string },
+  carrier: string,
+  trackingNumber: string
+) {
   const call = httpsCallable(functions, "submitShipment");
-  await call({ orderId, carrier, trackingNumber });
+  await call({ ...target, carrier, trackingNumber });
 }
 
-/** A client can only ever cancel an order awaiting shipment — firestore.rules enforces this too. */
+/**
+ * Cancels an order awaiting shipment and issues a real Stripe refund for
+ * this order's price — see functions/cancelOrder.js. This is no longer a
+ * direct Firestore write (firestore.rules denies that now), since a refund
+ * needs the Stripe secret key, which only the Admin SDK has.
+ */
 export async function cancelOrder(orderId: string) {
-  await updateDoc(doc(ordersRef, orderId), { status: "cancelled" });
+  const call = httpsCallable(functions, "cancelOrder");
+  await call({ orderId });
 }
 
 function useOrderQuery(field: "buyerId" | "sellerId", uid: string | undefined) {

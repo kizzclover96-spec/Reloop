@@ -36,18 +36,12 @@ service cloud.firestore {
       // through the same Stripe-verified flow, just for a flat €3 fee.
       allow create: if false;
 
-      // A client can only ever cancel an order — nothing else. "completed"
-      // now means a real Stripe transfer moved the seller's money, and that
-      // only ever happens inside submitShipment (Admin SDK, after a
-      // tracking number is verified). If clients could set status to
-      // "completed" directly, a buyer could mark an order paid-out before
-      // the seller ever shipped anything.
-      allow update: if request.auth != null
-                    && (resource.data.buyerId == request.auth.uid
-                        || resource.data.sellerId == request.auth.uid)
-                    && request.resource.data.status == 'cancelled'
-                    && resource.data.status == 'awaiting_shipment'
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      // Orders can no longer be updated by the client at all. Cancelling an
+      // order now issues a real Stripe refund (see functions/cancelOrder.js),
+      // which needs the Stripe secret key — that can only happen via the
+      // Admin SDK, so there's nothing left for a direct client write to
+      // legitimately do here.
+      allow update: if false;
 
       allow delete: if false;
     }
@@ -75,6 +69,15 @@ service cloud.firestore {
       // (and dangerous) since it isn't backed by anything Stripe actually verified.
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;
+    }
+
+    match /cartCheckouts/{cartCheckoutId} {
+      // Scratch space between createCartPaymentIntent and the webhook's
+      // markCartPaid — holds the real line-item breakdown for a multi-item
+      // cart (kept out of Stripe's metadata, which has a size limit a cart
+      // could easily exceed). Only ever written and read by Cloud Functions'
+      // Admin SDK; nothing here needs to be, or should be, client-visible.
+      allow read, write: if false;
     }
   }
 }

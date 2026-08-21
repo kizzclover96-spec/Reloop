@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, limit, updateDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, limit, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db, storage, functions } from "../firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { SEED_LISTINGS, type ListingData } from "./products";
 import { compressImage } from "../utils/image";
@@ -97,6 +97,24 @@ export async function uploadListingPhoto(uid: string, listingId: string, file: F
 
 export async function markListingSold(id: string) {
   await updateDoc(doc(db, "listings", id), { status: "sold" });
+}
+
+/**
+ * Deletes a listing the seller owns — both the Firestore doc and its
+ * Storage photos. Firestore rules already let a seller delete their own
+ * listing doc directly; Storage rules likewise let them delete files under
+ * their own `listings/{uid}/{listingId}/` folder, so this is safe to do
+ * fully client-side without needing a Cloud Function.
+ */
+export async function deleteListing(listing: Listing) {
+  await deleteDoc(doc(db, "listings", listing.id));
+  try {
+    const folderRef = ref(storage, `listings/${listing.sellerId}/${listing.id}`);
+    const filesList = await listAll(folderRef);
+    await Promise.all(filesList.items.map((item) => deleteObject(item)));
+  } catch (err) {
+    console.warn("Failed to clean up listing photos after delete:", err);
+  }
 }
 
 /** One-time helper: pushes the sample catalog in as real listings, tagged to the given seller. */

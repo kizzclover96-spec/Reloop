@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Path shape: listings/{sellerUid}/{listingId}/{fileName}
+    // The listingId matches the Firestore listing doc it belongs to, so a
+    // user's photos are scoped both to their own uid and to one listing.
+    match /listings/{uid}/{listingId}/{fileName} {
+      // Anyone can view listing photos — it's a public marketplace.
+      allow read: if true;
+
+      // Only the signed-in owner can upload into their own folder.
+      // Hard caps here back up the client-side compression: max 2MB per file,
+      // JPEG or WebP only (the two formats the app actually produces).
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.size < 2 * 1024 * 1024
+                    && (request.resource.contentType == 'image/jpeg'
+                        || request.resource.contentType == 'image/webp');
+
+      // No overwriting an existing file at this exact path — every upload
+      // gets a fresh timestamped filename, so "update" should never legitimately fire.
+      allow update: if false;
+
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
