@@ -5,6 +5,7 @@ const { getStorage } = require("firebase-admin/storage");
 const Stripe = require("stripe");
 const { shippingCentsFor, computeShipDeadline } = require("./shipping");
 const { generateReceiptCode } = require("./receipt");
+const { notifyUser } = require("./notifications");
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const db = getFirestore();
@@ -239,6 +240,29 @@ async function markCartPaid(paymentIntent) {
       bucket
         .deleteFiles({ prefix: `listings/${item.sellerId}/${item.listingId}/` })
         .catch((err) => console.error("Failed to delete listing photos after cart sale:", err))
+    )
+  );
+
+  const totalPaid = (paymentIntent.amount / 100).toFixed(2);
+  await notifyUser(buyerId, {
+    type: "purchase",
+    title: "Payment successful",
+    body: `Your payment of €${totalPaid} for ${cart.items.length} item${cart.items.length > 1 ? "s" : ""} went through. Head to Profile → Receipts to see it.`,
+    data: { screen: "receipts" },
+  });
+
+  const sellerItemCounts = new Map();
+  for (const item of cart.items) {
+    sellerItemCounts.set(item.sellerId, (sellerItemCounts.get(item.sellerId) || 0) + 1);
+  }
+  await Promise.all(
+    Array.from(sellerItemCounts.entries()).map(([sellerId, count]) =>
+      notifyUser(sellerId, {
+        type: "sale",
+        title: count > 1 ? "You made a sale!" : "You made a sale!",
+        body: `${count} item${count > 1 ? "s" : ""} just sold. Ship within 24 business hours to get paid.`,
+        data: { screen: "pickup" },
+      })
     )
   );
 }

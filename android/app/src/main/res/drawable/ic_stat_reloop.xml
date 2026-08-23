@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Placeholder status bar icon for push notifications, referenced as
+  "ic_stat_reloop" in functions/notifications.js's Android payload.
+  Android auto-tints notification small icons to a monochrome silhouette
+  regardless of fill color — only the shape (alpha channel) matters, so
+  this renders correctly as-is, but it's a plain circle, not real Reloop
+  branding. Replace with a proper simple logo mark when one exists, same
+  situation as the app icon/splash screen — this just needs to exist so
+  the reference doesn't break.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M12,20 C7.59,20 4,16.41 4,12 C4,7.59 7.59,4 12,4 C16.41,4 20,7.59 20,12 C20,16.41 16.41,20 12,20 Z" />
+</vector>

@@ -9,6 +9,7 @@ const { moderateListing } = require("./moderation");
 
 initializeApp();
 const db = getFirestore();
+const { notifyUser } = require("./notifications");
 
 /**
  * Server-side mirror of src/utils/sanitize.ts. Client-side sanitization is
@@ -158,6 +159,13 @@ exports.createListing = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 60 }
     sellerId: uid,
     status: "active",
     createdAt: Date.now(),
+  });
+
+  await notifyUser(uid, {
+    type: "listing_created",
+    title: "Your listing is live",
+    body: `${sanitizeText(data.title, 120)} is now visible on Reloop.`,
+    data: { screen: "selling" },
   });
 
   return { id };
@@ -332,3 +340,9 @@ exports.createCartPaymentIntent = cartCheckout.createCartPaymentIntent;
 // Order cancellation with a real Stripe refund — see cancelOrder.js
 const cancelOrderFn = require("./cancelOrder");
 exports.cancelOrder = cancelOrderFn.cancelOrder;
+
+// Push notification token registration + welcome notification — see pushTokens.js
+const pushTokens = require("./pushTokens");
+exports.registerPushToken = pushTokens.registerPushToken;
+exports.unregisterPushToken = pushTokens.unregisterPushToken;
+exports.onUserCreated = pushTokens.onUserCreated;

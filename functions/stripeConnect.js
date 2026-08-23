@@ -5,6 +5,13 @@ const Stripe = require("stripe");
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+// Stripe generates a separate signing secret per event destination.
+// account.updated (a Connect/connected-account event) and the
+// payment_intent.* events (which fire on Reloop's own platform account) live
+// in two different destination scopes — "Connected accounts" and "Your
+// account" respectively — even though both point at this same webhook URL.
+// That means two different secrets, both needing to be checked below.
+const STRIPE_WEBHOOK_SECRET_CONNECT = defineSecret("STRIPE_WEBHOOK_SECRET_CONNECT");
 
 const db = getFirestore();
 
@@ -113,17 +120,24 @@ exports.getStripeAccountStatus = onCall({ secrets: [STRIPE_SECRET_KEY] }, async 
  * later). Uses onRequest (not onCall) because Stripe needs the raw request
  * body to verify the signature.
  */
-exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET] }, async (req, res) => {
-  const stripe = getStripe(STRIPE_SECRET_KEY.value());
-  let event;
-  try {
+exports.stripeWebhook = onRequest(
+  { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET_CONNECT] },
+  async (req, res) => {
+    const stripe = getStripe(STRIPE_SECRET_KEY.value());
     const signature = req.headers["stripe-signature"];
-    event = stripe.webhooks.constructEvent(req.rawBody, signature, STRIPE_WEBHOOK_SECRET.value());
-  } catch (err) {
-    console.error("Stripe webhook signature verification failed:", err.message);
-    res.status(400).send("Invalid signature");
-    return;
-  }
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.rawBody, signature, STRIPE_WEBHOOK_SECRET.value());
+    } catch (err) {
+      try {
+        event = stripe.webhooks.constructEvent(req.rawBody, signature, STRIPE_WEBHOOK_SECRET_CONNECT.value());
+      } catch (err2) {
+        console.error("Stripe webhook signature verification failed against both secrets:", err2.message);
+        res.status(400).send("Invalid signature");
+        return;
+      }
+    }
 
   if (event.type === "account.updated") {
     const account = event.data.object;

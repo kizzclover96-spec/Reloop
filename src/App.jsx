@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 import { COLOR, SERIF, SANS, cssBackground } from "./theme";
 import { useCart } from "./context/CartContext";
+import { Capacitor } from "@capacitor/core";
+import { Camera as CapacitorCamera } from "@capacitor/camera";
+import { FirebaseMessaging } from "@capacitor-firebase/messaging";
+import { checkPushPermission, requestPushPermission, registerCurrentDeviceForPush, unregisterCurrentDeviceForPush } from "./data/push";
 import Cart from "./Cart";
 import { useAuth } from "./context/AuthContext";
 import {
@@ -38,6 +42,9 @@ import { useLanguage } from "./i18n/LanguageContext";
 import LanguageSwitcher from "./i18n/LanguageSwitcher";
 import ProductView from "./ProductView";
 import ProfileScreen from "./ProfileScreen";
+import Notifications from "./Notifications";
+import Tutorial from "./Tutorial";
+import { useUserNotifications } from "./data/notifications";
 import LoginScreen from "./LoginScreen";
 import AddressSetup from "./AddressSetup";
 import { useUserAddress } from "./data/address";
@@ -236,7 +243,7 @@ function TopBar({ title, onBack, right }) {
 /* ---------------------------------------------------------------
    Home
 --------------------------------------------------------------- */
-function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, onSelectProduct, onSearch, onOpenCart, cartCount }) {
+function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, onSelectProduct, onSearch, onOpenCart, cartCount, onOpenNotifications, unreadNotifications }) {
   const { t } = useLanguage();
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchInput, setSearchInput] = useState("");
@@ -319,7 +326,27 @@ function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, 
               </span>
             )}
           </button>
-          <Bell size={19} color={COLOR.ink} strokeWidth={1.6} />
+          <button
+            onClick={onOpenNotifications}
+            aria-label={t("notif.title")}
+            style={{ position: "relative", background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
+          >
+            <Bell size={19} color={COLOR.ink} strokeWidth={1.6} />
+            {unreadNotifications > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -2,
+                  right: -2,
+                  width: 9,
+                  height: 9,
+                  borderRadius: "50%",
+                  background: "#D64545",
+                  border: `1.5px solid ${COLOR.bg}`,
+                }}
+              />
+            )}
+          </button>
         </div>
       </div>
 
@@ -535,7 +562,7 @@ function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFi
       >
         <span style={{ width: 19 }} />
         <span style={{ fontFamily: SERIF, fontSize: 17, color: COLOR.ink }}>{t("discover.title")}</span>
-        <Camera size={19} color={COLOR.ink} strokeWidth={1.6} />
+        <span style={{ width: 19 }} />
       </div>
 
       {listings.length > 0 && (
@@ -861,6 +888,9 @@ function ListScreen({ user, listings }) {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const fileInputRef = React.useRef(null);
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const [permissionPrimer, setPermissionPrimer] = useState(null); // { type, onAllow, onCancel } | null
+  const [permissionDenied, setPermissionDenied] = useState(null); // 'camera' | 'photos' | null
 
   const activeListingCount = listings.filter((l) => l.sellerId === user?.uid && l.status === "active").length;
   const atListingLimit = activeListingCount >= MAX_ACTIVE_LISTINGS_PER_USER;
@@ -898,6 +928,87 @@ function ListScreen({ user, listings }) {
   };
 
   const removeUpload = (id) => setUploads((prev) => prev.filter((u) => u.id !== id));
+
+  /**
+   * Turns a Capacitor Camera MediaResult (from either takePhoto or
+   * chooseFromGallery) into a real File and feeds it through the exact
+   * same handleFiles pipeline the web file-input path uses — identical
+   * compression/upload/validation behavior either way.
+   */
+  const addNativeMediaResult = async (media) => {
+    if (!media?.webPath) return;
+    const response = await fetch(media.webPath);
+    const blob = await response.blob();
+    const ext = media.format || "jpeg";
+    const file = new File([blob], `photo-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`, {
+      type: blob.type || `image/${ext}`,
+    });
+    await handleFiles([file]);
+  };
+
+  /**
+   * Checks the real OS permission state before doing anything. If it's
+   * already been decided (granted or permanently denied), acts on that
+   * directly. If it hasn't been asked yet, shows Reloop's own short
+   * explanation FIRST — "why we're asking" — and only triggers the actual
+   * OS permission dialog once the person taps Allow on our screen. This is
+   * what "ask before simply opening" means in practice: our own explainer
+   * always comes before the system one, never skipped.
+   */
+  const ensurePermission = (type) =>
+    new Promise((resolve) => {
+      CapacitorCamera.checkPermissions().then((status) => {
+        const current = status[type];
+        if (current === "granted" || current === "limited") return resolve(true);
+        if (current === "denied") {
+          setPermissionDenied(type);
+          return resolve(false);
+        }
+        // 'prompt' or 'prompt-with-rationale' — nothing decided yet.
+        setPermissionPrimer({
+          type,
+          onAllow: async () => {
+            setPermissionPrimer(null);
+            const result = await CapacitorCamera.requestPermissions({ permissions: [type] });
+            if (result[type] === "granted" || result[type] === "limited") {
+              resolve(true);
+            } else {
+              setPermissionDenied(type);
+              resolve(false);
+            }
+          },
+          onCancel: () => {
+            setPermissionPrimer(null);
+            resolve(false);
+          },
+        });
+      });
+    });
+
+  const takePhotoNative = async () => {
+    setPhotoSheetOpen(false);
+    if (!(await ensurePermission("camera"))) return;
+    try {
+      const media = await CapacitorCamera.takePhoto({ quality: 85 });
+      await addNativeMediaResult(media);
+    } catch (err) {
+      // user cancelled the camera — not a real error
+    }
+  };
+
+  const chooseFromGalleryNative = async () => {
+    setPhotoSheetOpen(false);
+    if (!(await ensurePermission("photos"))) return;
+    try {
+      const room = MAX_PHOTOS_PER_LISTING - uploads.length;
+      const result = await CapacitorCamera.chooseFromGallery({ allowMultipleSelection: room > 1 });
+      for (const media of result.results.slice(0, room)) {
+        await addNativeMediaResult(media);
+      }
+    } catch (err) {
+      // user cancelled the gallery picker — not a real error
+    }
+  };
 
   const selectCategory = (name) => {
     setCategory(name);
@@ -1058,7 +1169,7 @@ function ListScreen({ user, listings }) {
           ))}
           {uploads.length < MAX_PHOTOS_PER_LISTING && (
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => (Capacitor.isNativePlatform() ? setPhotoSheetOpen(true) : fileInputRef.current?.click())}
               style={{
                 width: 64,
                 height: 64,
@@ -1392,9 +1503,155 @@ function ListScreen({ user, listings }) {
           )}
         </button>
       </div>
+
+      {photoSheetOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(20,18,15,0.4)",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            zIndex: 90,
+          }}
+          onClick={() => setPhotoSheetOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              background: COLOR.card,
+              borderRadius: "18px 18px 0 0",
+              padding: "10px 16px calc(20px + env(safe-area-inset-bottom))",
+            }}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: COLOR.lineSoft, margin: "6px auto 14px" }} />
+            <button onClick={takePhotoNative} style={sheetButtonStyle}>
+              {t("list.takePhoto")}
+            </button>
+            <button onClick={chooseFromGalleryNative} style={sheetButtonStyle}>
+              {t("list.chooseFromLibrary")}
+            </button>
+            <button onClick={() => setPhotoSheetOpen(false)} style={{ ...sheetButtonStyle, color: COLOR.inkSoft, marginTop: 6 }}>
+              {t("profile.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {permissionPrimer && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(20,18,15,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 95,
+            padding: 24,
+          }}
+        >
+          <div style={{ background: COLOR.card, borderRadius: 16, padding: 24, maxWidth: 300, textAlign: "center" }}>
+            <p style={{ fontFamily: SERIF, fontSize: 16, color: COLOR.ink, margin: "0 0 8px" }}>
+              {t(permissionPrimer.type === "camera" ? "permission.cameraTitle" : "permission.photosTitle")}
+            </p>
+            <p style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, margin: "0 0 18px" }}>
+              {t(permissionPrimer.type === "camera" ? "permission.cameraBody" : "permission.photosBody")}
+            </p>
+            <button
+              onClick={permissionPrimer.onAllow}
+              style={{
+                width: "100%",
+                background: COLOR.ink,
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "11px",
+                fontFamily: SANS,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                marginBottom: 8,
+              }}
+            >
+              {t("permission.allow")}
+            </button>
+            <button
+              onClick={permissionPrimer.onCancel}
+              style={{
+                width: "100%",
+                background: "none",
+                border: "none",
+                padding: "8px",
+                fontFamily: SANS,
+                fontSize: 13,
+                fontWeight: 600,
+                color: COLOR.inkSoft,
+                cursor: "pointer",
+              }}
+            >
+              {t("permission.notNow")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {permissionDenied && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(20,18,15,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 95,
+            padding: 24,
+          }}
+        >
+          <div style={{ background: COLOR.card, borderRadius: 16, padding: 24, maxWidth: 300, textAlign: "center" }}>
+            <p style={{ fontFamily: SERIF, fontSize: 16, color: COLOR.ink, margin: "0 0 8px" }}>{t("permission.deniedTitle")}</p>
+            <p style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, margin: "0 0 18px" }}>{t("permission.deniedBody")}</p>
+            <button
+              onClick={() => setPermissionDenied(null)}
+              style={{
+                width: "100%",
+                background: COLOR.ink,
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "11px",
+                fontFamily: SANS,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {t("permission.ok")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const sheetButtonStyle = {
+  width: "100%",
+  background: "none",
+  border: "none",
+  borderTop: `0.5px solid ${COLOR.lineSoft}`,
+  padding: "14px 4px",
+  fontFamily: SANS,
+  fontSize: 14,
+  fontWeight: 600,
+  color: COLOR.ink,
+  cursor: "pointer",
+  textAlign: "center",
+};
 
 function FieldFlag({ show, hint }) {
   if (!show) return null;
@@ -1451,10 +1708,11 @@ const TABS = [
   { key: "profile", labelKey: "nav.profile", Icon: ProfileTabIcon },
 ];
 
-function BottomNav({ active, setActive }) {
+function BottomNav({ active, setActive, className }) {
   const { t } = useLanguage();
   return (
     <div
+      className={className}
       style={{
         display: "flex",
         borderTop: `0.5px solid ${COLOR.line}`,
@@ -1505,6 +1763,7 @@ function useIsMobile() {
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const { listings, loading: listingsLoading } = useListings();
   const [active, setActive] = useState("home");
   const [favourites, setFavourites] = useState(new Set());
@@ -1514,8 +1773,23 @@ export default function App() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [stripeReturn, setStripeReturn] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [pushPrimer, setPushPrimer] = useState(false);
+  const [notificationTarget, setNotificationTarget] = useState(null);
+  const { unreadCount: unreadNotifications } = useUserNotifications(user?.uid);
   const { itemIds: cartItemIds } = useCart();
   const isMobile = useIsMobile();
+
+  const handleNotificationNavigate = (screen) => {
+    setShowNotifications(false);
+    if (screen === "home") {
+      setActive("home");
+    } else {
+      setActive("profile");
+      setNotificationTarget(screen);
+    }
+  };
 
   // Stripe Connect onboarding redirects back here with ?stripe_return=1 (finished,
   // or at least exited the flow) or ?stripe_refresh=1 (the link expired mid-flow).
@@ -1610,6 +1884,8 @@ export default function App() {
           onSearch={goSearch}
           onOpenCart={() => setShowCart(true)}
           cartCount={cartItemIds.length}
+          onOpenNotifications={() => setShowNotifications(true)}
+          unreadNotifications={unreadNotifications}
         />
       ),
       shop: (
@@ -1634,7 +1910,15 @@ export default function App() {
           onSelectProduct={openProduct}
         />
       ),
-      profile: <ProfileScreen user={user} listings={listings} stripeReturn={stripeReturn} />,
+      profile: (
+        <ProfileScreen
+          user={user}
+          listings={listings}
+          stripeReturn={stripeReturn}
+          initialView={notificationTarget}
+          onConsumeInitialView={() => setNotificationTarget(null)}
+        />
+      ),
     }[active]
   );
 
@@ -1645,7 +1929,51 @@ export default function App() {
 
   const { address, loading: addressLoading } = useUserAddress(user?.uid);
 
-  const body = authLoading || (user && addressLoading) ? (
+  // Push permission: only ask once the user is fully in the app (signed in,
+  // address verified, tutorial dismissed) — never mid-onboarding. If it's
+  // already been decided, act on that directly; if not, show Reloop's own
+  // explainer first and let the person choose before the OS dialog appears.
+  useEffect(() => {
+    if (!user || !address?.verified || showTutorial || !Capacitor.isNativePlatform()) return;
+    let cancelled = false;
+    checkPushPermission().then((state) => {
+      if (cancelled) return;
+      if (state === "granted") {
+        registerCurrentDeviceForPush().catch((err) => console.warn("Push registration failed:", err));
+      } else if (state === "prompt" || state === "prompt-with-rationale") {
+        setPushPrimer(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, address?.verified, showTutorial]);
+
+  const handlePushAllow = async () => {
+    setPushPrimer(false);
+    const result = await requestPushPermission();
+    if (result === "granted") {
+      registerCurrentDeviceForPush().catch((err) => console.warn("Push registration failed:", err));
+    }
+  };
+
+  // Tapping a push notification when the app was backgrounded or fully
+  // closed fires this — same destination logic as tapping it inside the
+  // in-app notification feed.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handle = FirebaseMessaging.addListener("notificationActionPerformed", (event) => {
+      const screen = event.notification?.data?.screen;
+      if (typeof screen === "string") handleNotificationNavigate(screen);
+    });
+    return () => {
+      handle.then((h) => h.remove());
+    };
+  }, []);
+
+  const body = authLoading ? (
+    <div style={{ flex: 1, background: COLOR.bg }} />
+  ) : user && addressLoading ? (
     <>
       <div style={{ flex: 1, overflowY: "auto" }}>
         <HomeSkeleton />
@@ -1655,16 +1983,64 @@ export default function App() {
   ) : !user ? (
     <LoginScreen />
   ) : !address?.verified ? (
-    <AddressSetup onSaved={() => {}} />
+    <AddressSetup onSaved={() => setShowTutorial(true)} />
+  ) : showTutorial ? (
+    <Tutorial onDone={() => setShowTutorial(false)} />
   ) : (
     <>
       <div style={{ flex: 1, overflowY: "auto" }}>{screen}</div>
-      {!selectedProduct && <BottomNav active={active} setActive={changeTab} />}
+      {!selectedProduct && <BottomNav active={active} setActive={changeTab} className="no-print" />}
     </>
   );
 
   const cartBuyer = user ? { uid: user.uid, name: user.displayName || user.email?.split("@")[0] || "You" } : null;
   const cartOverlay = showCart && <Cart listings={listings} buyer={cartBuyer} onClose={() => setShowCart(false)} />;
+  const notificationsOverlay = showNotifications && user && (
+    <Notifications uid={user.uid} onBack={() => setShowNotifications(false)} onNavigate={handleNotificationNavigate} />
+  );
+  const pushPrimerOverlay = pushPrimer && (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(20,18,15,0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 95,
+        padding: 24,
+      }}
+    >
+      <div style={{ background: COLOR.card, borderRadius: 16, padding: 24, maxWidth: 300, textAlign: "center" }}>
+        <p style={{ fontFamily: SERIF, fontSize: 16, color: COLOR.ink, margin: "0 0 8px" }}>{t("permission.pushTitle")}</p>
+        <p style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, margin: "0 0 18px" }}>{t("permission.pushBody")}</p>
+        <button
+          onClick={handlePushAllow}
+          style={{
+            width: "100%",
+            background: COLOR.ink,
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "11px",
+            fontFamily: SANS,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            marginBottom: 8,
+          }}
+        >
+          {t("permission.allow")}
+        </button>
+        <button
+          onClick={() => setPushPrimer(false)}
+          style={{ width: "100%", background: "none", border: "none", padding: "8px", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: COLOR.inkSoft, cursor: "pointer" }}
+        >
+          {t("permission.notNow")}
+        </button>
+      </div>
+    </div>
+  );
 
   if (isMobile) {
     return (
@@ -1676,11 +2052,16 @@ export default function App() {
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          boxSizing: "border-box",
         }}
       >
         {FONT_LINK}
         {body}
         {cartOverlay}
+        {notificationsOverlay}
+        {pushPrimerOverlay}
       </div>
     );
   }
@@ -1718,6 +2099,8 @@ export default function App() {
         <div style={{ height: 40, flexShrink: 0 }} />
         {body}
         {cartOverlay}
+        {notificationsOverlay}
+        {pushPrimerOverlay}
       </div>
     </div>
   );

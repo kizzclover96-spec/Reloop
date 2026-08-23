@@ -1,4 +1,4 @@
-const MODEL = "gemini-2.0-flash";
+const MODEL = "gemini-3.6-flash";
 
 const PROMPT = `You are a content moderator for Reloop, a secondhand clothing and fashion accessories marketplace. Review the listing below (title, description, and photos) and answer two separate questions.
 

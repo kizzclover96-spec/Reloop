@@ -35,6 +35,11 @@ import { useUserAddress } from "./data/address";
 import AddressSetup from "./AddressSetup";
 import ReceiptDetail from "./ReceiptDetail";
 import DataDisclosure from "./DataDisclosure";
+import HelpSupport from "./HelpSupport";
+import { useUserNotifications, markNotificationRead } from "./data/notifications";
+import { unregisterCurrentDeviceForPush } from "./data/push";
+import { Capacitor } from "@capacitor/core";
+import { Browser as CapacitorBrowser } from "@capacitor/browser";
 import LegalViewer from "./legal/LegalViewer";
 import { useAuth } from "./context/AuthContext";
 import { useLanguage } from "./i18n/LanguageContext";
@@ -465,10 +470,14 @@ export default function ProfileScreen({
   user,
   listings,
   stripeReturn,
+  initialView,
+  onConsumeInitialView,
 }: {
   user: any;
   listings: Listing[];
   stripeReturn?: boolean;
+  initialView?: string | null;
+  onConsumeInitialView?: () => void;
 }) {
   const { logout } = useAuth();
   const { t } = useLanguage();
@@ -485,11 +494,27 @@ export default function ProfileScreen({
   const [shippingGroupKey, setShippingGroupKey] = useState<string | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<{ order: Order; role: "buyer" | "seller" } | null>(null);
   const [showDisclosure, setShowDisclosure] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [showPrivacyDoc, setShowPrivacyDoc] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
   const [paymentOpening, setPaymentOpening] = useState(false);
   const [paymentError, setPaymentError] = useState(false);
+  const { notifications: userNotifications, hasUnreadReceipt } = useUserNotifications(user?.uid);
+
+  const openReceipts = () => {
+    setShowReceipts(true);
+    userNotifications.filter((n) => !n.read && n.data?.screen === "receipts").forEach((n) => markNotificationRead(n.id));
+  };
+
+  useEffect(() => {
+    if (!initialView) return;
+    if (initialView === "receipts") setShowReceipts(true);
+    else if (initialView === "pickup") setExpanded("pickup");
+    else if (initialView === "selling") setExpanded("selling");
+    onConsumeInitialView?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialView]);
 
   const { status: paymentStatus, loading: paymentLoading } = useSellerPaymentStatus(user?.uid);
 
@@ -504,13 +529,40 @@ export default function ProfileScreen({
     setPaymentError(false);
     try {
       const url = await getStripeOnboardingUrl();
-      window.location.href = url;
+      if (Capacitor.isNativePlatform()) {
+        // window.location.href would try to navigate the app's own WebView
+        // to Stripe's domain — Capacitor blocks that by default, which is
+        // exactly the "couldn't connect to Stripe" failure. An in-app
+        // browser tab (Chrome Custom Tabs / SFSafariViewController) opens
+        // Stripe's onboarding as an overlay instead, leaving the app's own
+        // WebView and state untouched underneath.
+        await CapacitorBrowser.open({ url });
+      } else {
+        window.location.href = url;
+      }
     } catch (err) {
       setPaymentError(true);
       setPaymentOpening(false);
       setTimeout(() => setPaymentError(false), 3000);
     }
   };
+
+  // There's no deep-link redirect back into the app when the in-app browser
+  // tab closes (that would need Android App Links / iOS Universal Links —
+  // a real hosted domain-verification setup, not something this app has).
+  // Instead, closing the tab — for any reason, including just finishing
+  // onboarding — triggers a fresh status pull, which is what actually
+  // reflects whether onboarding completed.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handle = CapacitorBrowser.addListener("browserFinished", () => {
+      setPaymentOpening(false);
+      refreshStripeStatus().catch(() => {});
+    });
+    return () => {
+      handle.then((h) => h.remove());
+    };
+  }, []);
 
   useEffect(() => {
     getPreference("searchRadiusKm", 5).then(setRadius);
@@ -673,6 +725,10 @@ export default function ProfileScreen({
 
   if (showPrivacyDoc) {
     return <LegalViewer docKey="privacy" onBack={() => setShowPrivacyDoc(false)} />;
+  }
+
+  if (showHelp) {
+    return <HelpSupport onBack={() => setShowHelp(false)} />;
   }
 
   if (showDisclosure) {
@@ -845,8 +901,9 @@ export default function ProfileScreen({
           </div>
         </div>
         <button
-          onClick={() => setShowReceipts(true)}
+          onClick={openReceipts}
           style={{
+            position: "relative",
             display: "flex",
             alignItems: "center",
             gap: 5,
@@ -863,6 +920,20 @@ export default function ProfileScreen({
           }}
         >
           <Receipt size={13} /> {t("profile.receipts")}
+          {hasUnreadReceipt && (
+            <span
+              style={{
+                position: "absolute",
+                top: -2,
+                right: -2,
+                width: 9,
+                height: 9,
+                borderRadius: "50%",
+                background: "#D64545",
+                border: `1.5px solid ${COLOR.bg}`,
+              }}
+            />
+          )}
         </button>
       </div>
 
@@ -1131,8 +1202,7 @@ export default function ProfileScreen({
           onClick={() => setEditAddress(true)}
         />
         <Row label={t("profile.privacy")} onClick={() => setShowDisclosure(true)} />
-        <Row label={t("profile.helpSupport")} onClick={() => {}} />
-        <Row label={t("profile.terms")} onClick={() => {}} showChevron={false} />
+        <Row label={t("profile.helpSupport")} onClick={() => setShowHelp(true)} />
       </Section>
 
       <Section icon={<Database size={15} color={COLOR.ink} strokeWidth={1.6} />} title={t("profile.yourData")} collapsible defaultOpen={false}>
@@ -1210,7 +1280,9 @@ export default function ProfileScreen({
 
       <div style={{ padding: "0 18px" }}>
         <button
-          onClick={() => logout()}
+          onClick={() => {
+            unregisterCurrentDeviceForPush().finally(() => logout());
+          }}
           style={{
             width: "100%",
             display: "flex",

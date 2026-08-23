@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#111111</color>
+    <color name="colorPrimaryDark">#111111</color>
+    <color name="colorAccent">#2563EB</color>
+    <!-- Matches COLOR.bg in src/theme.ts — the app's own screen background,
+         so the status bar (top) and navigation bar (bottom) blend into the
+         app instead of showing as a different-colored native strip. -->
+    <color name="appBackground">#FFFFFF</color>
+</resources>

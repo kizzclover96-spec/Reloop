@@ -5,6 +5,7 @@ const { getStorage } = require("firebase-admin/storage");
 const Stripe = require("stripe");
 const { shippingCentsFor, computeShipDeadline } = require("./shipping");
 const { generateReceiptCode } = require("./receipt");
+const { notifyUser } = require("./notifications");
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const db = getFirestore();
@@ -225,6 +226,20 @@ async function markOrderPaid(paymentIntent) {
     } catch (err) {
       console.error("Failed to delete listing photos after sale:", err);
     }
+
+    const itemLabel = `${brand || ""} ${title || ""}`.trim() || "your item";
+    await notifyUser(buyerId, {
+      type: "purchase",
+      title: "Payment successful",
+      body: `Your payment for ${itemLabel} went through. Head to Profile → Receipts to see it.`,
+      data: { screen: "receipts" },
+    });
+    await notifyUser(sellerId, {
+      type: "sale",
+      title: "You made a sale!",
+      body: `${itemLabel} just sold. Ship it within 24 business hours to get paid.`,
+      data: { screen: "pickup" },
+    });
   }
 }
 

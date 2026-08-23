@@ -398,6 +398,41 @@ A broad round covering security hardening, legal compliance, localization, and U
 - **"More from this seller"** on the product page — a horizontal strip of the seller's other active listings.
 - **"Add another item from this seller and save on shipping"** nudge in the cart, with actual quick-add thumbnails — not just text, a real one-tap add.
 
+## Turning this into a real iOS/Android app (Capacitor)
+
+The web app is wrapped with [Capacitor](https://capacitorjs.com), which is already scaffolded in this repo — `android/` and `ios/` are real native projects (Gradle and Xcode respectively), not placeholders.
+
+### Every time you change the web code
+
+```
+npm run build
+npx cap sync
+```
+
+`sync` copies the fresh `dist/` build into both native projects and updates any native plugin dependencies. Then:
+
+```
+npx cap open android   # opens Android Studio
+npx cap open ios       # opens Xcode — requires a Mac, no way around this, it's an Apple restriction
+```
+
+### Google/Yahoo login required a real fix, not a workaround
+
+Google explicitly blocks OAuth sign-in inside an embedded WebView — both popup and redirect — as a security policy (you'd see a `disallowed_useragent` error). This is a hard rule on Google's side, not a Capacitor limitation to configure around. The only real fix is triggering the platform's actual native sign-in (a system account chooser or a genuine browser tab, never the app's own WebView), which is what the `@capacitor-firebase/authentication` plugin does — already installed and wired into `AuthContext.tsx`. It detects native vs. web at runtime (`Capacitor.isNativePlatform()`) and only changes behavior inside the native app; the website's login flow is untouched.
+
+**This needs one more step before it actually works, which only you can do** — native OAuth requires per-platform credentials that get generated from your specific app's bundle identifier and signing certificate, none of which exist until you've set up real Xcode/Android Studio signing:
+
+- **Android**: download `google-services.json` from Firebase Console → Project Settings → your Android app (register one if you haven't, using this project's app ID, `com.reloop.app` — see the note below about changing that ID first) → place it at `android/app/google-services.json`. You'll also need to register your debug/release SHA-1 fingerprint(s) with Firebase for Google Sign-In to work at all.
+- **iOS**: download `GoogleService-Info.plist` from Firebase Console → your iOS app → place it in `ios/App/App/`, then add the reversed client ID as a URL scheme in Xcode (Signing & Capabilities → URL Types) — Firebase's iOS setup guide walks through this exact step.
+- **Yahoo**: `FirebaseAuthentication.signInWithYahoo()` is the plugin's documented method as of when this was written — if it doesn't exist on whatever version actually installs for you, check https://capawesome.io/plugins/firebase/authentication/ for the current API, since less-common providers move around more between plugin versions than Google/Apple do.
+
+### Before you actually submit to either store
+
+- **Change the app ID.** `capacitor.config.ts` currently has `appId: "com.reloop.app"` as a placeholder — this needs to be your own reverse-domain identifier (matching what you register in Firebase, the App Store, and Play Console) before shipping. Changing it after native projects already exist means re-running `npx cap add ios`/`android` or manually updating the bundle identifiers in Xcode/Android Studio — easier to lock this in early.
+- **App icons and splash screen** — Capacitor has an asset generator (`@capacitor/assets`) that produces every required icon size from one source image, but you need to supply that source image; nothing was generated here since there's no logo asset to start from.
+- **Apple Pay / Google Pay via Stripe** may not appear inside the Capacitor WebView the way they do in mobile Safari/Chrome — wallet payments generally need a real system browser context. Card payments through Stripe's Payment Element should keep working fine since that's standard form input, not a wallet handoff. Test this specifically before assuming it works.
+- **Environment variables are baked in at build time** — double-check `.env.local` has your real Firebase config filled in before running `npm run build` ahead of `cap sync`, since whatever's in there at build time is what ships.
+
 ## Known limitations
 
 - **No real money movement.** Withdraw writes a Firestore record and updates the balance shown in the app — actually paying out to a bank account needs a payments processor (Stripe Connect is the usual pick) plus a server-side Cloud Function to hold the secret key, which is a separate build.

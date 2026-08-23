@@ -52,7 +52,7 @@ function PermissionRow({
 export default function DataDisclosure({ onBack, onOpenPrivacyPolicy }: DataDisclosureProps) {
   const { t } = useLanguage();
   return (
-    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 65, display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 65, display: "flex", flexDirection: "column", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div
         style={{
           display: "flex",

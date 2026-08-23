@@ -53,10 +53,27 @@ export function useSellerPaymentStatus(uid: string | undefined) {
   return { status, loading };
 }
 
+import { Capacitor } from "@capacitor/core";
+
+/**
+ * On the web, window.location.origin is the real page origin and works
+ * fine as the base for Stripe's return_url/refresh_url. On native,
+ * window.location.origin resolves to Capacitor's internal "https://localhost"
+ * placeholder — it passes the server's /^https?:\/\// check, so link
+ * creation doesn't fail outright, but it isn't a real address anything can
+ * actually redirect to. Since native onboarding is handled via an in-app
+ * browser tab (see ProfileScreen.tsx) rather than by following a redirect
+ * back into the app, the exact return_url content doesn't need to route
+ * anywhere special — it just needs to be a real, valid HTTPS URL.
+ */
+function connectOrigin(): string {
+  return Capacitor.isNativePlatform() ? "https://reloop-72656.web.app" : window.location.origin;
+}
+
 /** Creates (or reuses) a Stripe Connect account and returns a fresh onboarding link URL. */
 export async function getStripeOnboardingUrl(): Promise<string> {
   const call = httpsCallable<{ origin: string }, { url: string }>(functions, "createStripeConnectLink");
-  const result = await call({ origin: window.location.origin });
+  const result = await call({ origin: connectOrigin() });
   return result.data.url;
 }
 

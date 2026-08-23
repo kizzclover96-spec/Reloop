@@ -4,6 +4,8 @@ import { ChevronLeft, Printer } from "lucide-react";
 import { COLOR, SERIF, SANS } from "./theme";
 import { useLanguage } from "./i18n/LanguageContext";
 import type { Order } from "./data/orders";
+import { Capacitor } from "@capacitor/core";
+import { Printer as CapacitorPrinter } from "@capgo/capacitor-printer";
 
 interface ReceiptDetailProps {
   order: Order;
@@ -17,6 +19,24 @@ export default function ReceiptDetail({ order, role, sellerId, onBack }: Receipt
   const isSeller = role === "seller";
   const isAwaitingShipment = order.status === "awaiting_shipment";
   const green = isSeller && isAwaitingShipment;
+
+  /**
+   * window.print() works fine in a real mobile browser (which is why this
+   * worked in testing before this was ever a native app) but does nothing
+   * in a bare Android/iOS WebView — there's no built-in print handling
+   * there. @capgo/capacitor-printer's printWebView() uses the platform's
+   * actual native print framework (Android's PrintManager, iOS's
+   * UIPrintInteractionController) to print the current screen instead.
+   */
+  const handlePrint = () => {
+    if (Capacitor.isNativePlatform()) {
+      CapacitorPrinter.printWebView({ name: `Reloop-${order.receiptCode}` }).catch((err) =>
+        console.warn("Native print failed:", err)
+      );
+    } else {
+      window.print();
+    }
+  };
 
   const qrValue = isSeller
     ? JSON.stringify({ sellerId, code: order.receiptCode })
@@ -33,6 +53,65 @@ export default function ReceiptDetail({ order, role, sellerId, onBack }: Receipt
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: COLOR.bg }}>
+      {/*
+        @page sizes the printed page itself to a standard shipping-label
+        format (100x150mm / 4x6") — the same size Bluetooth/Wi-Fi/USB label
+        printers and most shipping-label paper expect. .no-print/.print-label
+        swap visibility only inside @media print, so on-screen this still
+        shows the normal receipt view, and printing shows only the compact
+        label — never the app chrome (header, back button, wallet details,
+        etc.) that would otherwise get printed onto a shipping label.
+        @capgo/capacitor-printer's printWebView() renders through the
+        platform's real print pipeline, which respects these rules exactly
+        like a browser's own window.print() would.
+      */}
+      <style>{`
+        .print-label { display: none; }
+        @media print {
+          @page { size: 100mm 150mm; margin: 5mm; }
+          .no-print { display: none !important; }
+          .print-label { display: block !important; }
+        }
+      `}</style>
+
+      {isSeller && (
+        <div className="print-label" style={{ width: "90mm", fontFamily: SANS, color: "#000" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 10, borderBottom: "1.5px solid #000" }}>
+            <img
+              src="/reloop-logo.png"
+              alt="Reloop"
+              style={{ width: 26, height: 26, objectFit: "contain" }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+            <span style={{ fontFamily: SERIF, fontSize: 16, letterSpacing: "0.06em" }}>Reloop</span>
+          </div>
+
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", margin: "0 0 6px" }}>{t("profile.shipTo")}</p>
+          {order.shippingAddress && (
+            <div style={{ fontSize: 15, lineHeight: 1.6, marginBottom: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 17 }}>{order.buyerName}</div>
+              <div>{order.shippingAddress.line1}</div>
+              {order.shippingAddress.line2 && <div>{order.shippingAddress.line2}</div>}
+              <div>
+                {order.shippingAddress.postalCode} {order.shippingAddress.city}
+              </div>
+              <div>{order.shippingAddress.country}</div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px dashed #000", paddingTop: 12 }}>
+            <div>
+              <p style={{ fontSize: 9, letterSpacing: "0.06em", margin: "0 0 2px", color: "#444" }}>{t("profile.receiptCode")}</p>
+              <p style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 700, letterSpacing: "0.1em", margin: 0 }}>{order.receiptCode}</p>
+            </div>
+            <QRCodeSVG value={qrValue} size={64} />
+          </div>
+        </div>
+      )}
+
+      <div className="no-print" style={{ display: "contents" }}>
       <div
         style={{
           display: "flex",
@@ -177,7 +256,7 @@ export default function ReceiptDetail({ order, role, sellerId, onBack }: Receipt
 
         {isSeller && (
           <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             disabled={!order.shippingAddress}
             style={{
               width: "100%",
@@ -200,6 +279,7 @@ export default function ReceiptDetail({ order, role, sellerId, onBack }: Receipt
             <Printer size={14} /> {t("profile.printSticker")}
           </button>
         )}
+      </div>
       </div>
     </div>
   );

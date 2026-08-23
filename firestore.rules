@@ -79,5 +79,18 @@ service cloud.firestore {
       // Admin SDK; nothing here needs to be, or should be, client-visible.
       allow read, write: if false;
     }
+
+    match /notifications/{notificationId} {
+      // A user can read their own notifications, and can mark one as read
+      // (and only that — nothing else about a notification is theirs to
+      // change). Notifications are only ever created by Cloud Function
+      // triggers (order created, listing created, new account) via the
+      // Admin SDK, and are never client-deletable.
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false;
+    }
   }
 }

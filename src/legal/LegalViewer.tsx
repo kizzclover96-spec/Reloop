@@ -126,7 +126,7 @@ interface LegalViewerProps {
 export default function LegalViewer({ docKey, onBack }: LegalViewerProps) {
   const { t } = useLanguage();
   return (
-    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 80, display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 80, display: "flex", flexDirection: "column", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div
         style={{
           display: "flex",

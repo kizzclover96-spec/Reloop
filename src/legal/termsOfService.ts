@@ -1,534 +1,506 @@
 export const TERMS_OF_SERVICE = `# Terms of Service
 
+**Last updated:** 22.08.2026
 
+## 1. About Reloop
 
-Last updated: 21.08.2026
-
-## 1. Who we are
-
-Reloop is operated by Malvin AI registered at im waager 41 72581 Dettingen an Der Erms, Germany ("Reloop", "we", "us", or "our").
+Reloop is operated by malvinai, Germany ("Reloop", "we", "us", or "our").
 
 Contact:
-Email: praiseangel509@gmail.com
-Postal address: im waager 41 72581 Dettingen an Der Erms
 
+**Email:** praiseangel509@gmail.com  
+**Website:** www.malvinai.com
 
-Managing Director / Owner: Imasuen Eloghosa Praise
+Additional legally required provider information is available in our Impressum.
 
 ## 2. What Reloop is
 
-Reloop is an online marketplace that allows users to list, discover, and purchase secondhand items from other users.
+Reloop is an online marketplace for secondhand clothing, footwear, bags, and accessories.
 
-Reloop may initially focus on clothing, footwear, bags, and accessories. We may expand or modify the categories supported by the platform.
+Reloop allows users to:
 
-Unless expressly stated otherwise:
+- create listings;
+- discover items listed by other users;
+- purchase listed items;
+- arrange shipping through the Reloop transaction flow; and
+- use related marketplace features provided by Reloop.
 
-- The sale contract for an item is between the buyer and the seller.
-- Reloop is not the owner of the listed item.
-- Reloop does not purchase inventory for resale.
-- Reloop is not the seller of items listed by users.
-- Reloop provides marketplace, payment, shipping, verification, moderation, and related technical services.
-- Payment services may be provided through third-party payment providers such as Stripe.
+Reloop is generally a platform provider and is not the owner or seller of items listed by users.
 
-Reloop may provide tools intended to reduce transaction risk, but these tools do not make Reloop a party to the underlying sale contract.
+Unless expressly stated otherwise, the contract for the purchase of an item is concluded directly between the buyer and the seller.
 
-## 3. Eligibility
+Reloop is not a party to the sale contract between two private users merely because the transaction is completed through the Reloop platform.
+
+Reloop provides the technical marketplace, payment and transaction infrastructure, moderation, shipping-related verification, and other platform services.
+
+### Private sellers
+
+Reloop is intended primarily for transactions between private individuals.
+
+Users must not use Reloop as a commercial trading business unless Reloop expressly permits them to do so and the applicable legal requirements for commercial sellers are satisfied.
+
+If you regularly buy items for resale, operate a business, or otherwise qualify as a trader under applicable law, you must not represent yourself as a private seller.
+
+We may restrict or terminate accounts that misuse the platform in this way.
+
+## 3. Acceptance of these Terms
+
+By creating an account or using Reloop, you agree to these Terms.
+
+If you do not agree to these Terms, you must not use Reloop.
+
+Additional rules may apply to particular features or transactions. These may include:
+
+- our Privacy Policy;
+- Refund and Cancellation Policy;
+- Community Guidelines;
+- AI Use & Transparency Notice;
+- Shipping Rules; and
+- other policies or rules displayed within Reloop.
+
+Where applicable, those documents form part of the contractual framework governing your use of Reloop.
+
+If a mandatory legal provision conflicts with these Terms, the mandatory legal provision prevails.
+
+## 4. Eligibility
 
 You must be at least 18 years old and legally capable of entering into binding contracts to use Reloop.
 
 By creating an account, you confirm that:
 
-- You are at least 18 years old.
-- The information you provide is accurate.
-- You are legally permitted to use the platform.
-- You will comply with these Terms and applicable law.
+- you are at least 18 years old;
+- the information you provide is accurate;
+- you are legally permitted to use the service; and
+- you are not using Reloop on behalf of another person without authorization.
 
-We do not knowingly permit persons under 18 to create accounts.
+Reloop does not knowingly permit persons under 18 to create accounts.
 
-If we reasonably believe an account has been created in violation of this requirement, we may restrict or terminate the account.
+## 5. Your account
 
-## 4. Your account
+You are responsible for maintaining the security of your account and login credentials.
 
-You are responsible for:
+You must:
 
-- Keeping your login credentials secure.
-- Keeping your account information accurate.
-- All activity carried out through your account, unless caused by unauthorized access that was not reasonably preventable by you.
-- Providing accurate information required for purchases, sales, payments, and shipping.
+- provide accurate and current information;
+- keep your password and authentication methods confidential;
+- maintain only one personal Reloop account unless we expressly permit otherwise;
+- use your own account when buying or selling; and
+- notify us if you believe your account has been compromised.
 
 You must not:
 
-- Create multiple accounts without our permission.
-- Create a new account to evade a suspension or restriction.
-- Allow another person to use your account.
-- Impersonate another person.
-- Provide false identity, payment, shipping, or seller information.
+- create accounts to evade a suspension or restriction;
+- impersonate another person;
+- provide false identity or payment information;
+- allow another person to use your account for prohibited activity; or
+- use another person's account without authorization.
 
-We may suspend, restrict, or terminate accounts where reasonably necessary to prevent fraud, abuse, illegal activity, security risks, or violations of these Terms.
+We may restrict, suspend, or terminate an account where reasonably necessary, including where we believe that:
 
-Where appropriate, we will provide the affected user with information about the reason for the restriction and any available review or appeal process.
+- these Terms have been violated;
+- fraudulent or deceptive activity has occurred;
+- the account creates a security or legal risk;
+- the account is being used for prohibited commercial activity;
+- applicable law requires us to take action; or
+- the safety or integrity of Reloop or its users is at risk.
 
-## 5. Listings
+Where required by applicable law, we will provide information about the reason for a restriction and any available review or appeal process.
 
-When you list an item, you confirm that:
+## 6. Listings
 
-- You own the item or are legally authorized to sell it.
-- The item is legal to sell.
-- The listing information is accurate and not misleading.
-- The photos accurately represent the item.
-- You accurately describe relevant defects, damage, wear, stains, missing parts, or other material characteristics.
-- You are not knowingly listing counterfeit, stolen, recalled, or prohibited goods.
-- You will not list an item that you are legally prohibited from selling.
-- You will not create duplicate, misleading, or fraudulent listings.
+When creating a listing, you confirm that:
 
-Reloop may limit the categories, prices, quantities, or types of items that can be listed.
+- you own the item or are legally authorized to sell it;
+- the item is legally permitted to be sold;
+- the description is accurate;
+- the photographs accurately represent the item;
+- you have the right to upload the photographs and other content;
+- you have not deliberately concealed material defects;
+- the item is not counterfeit or unlawfully obtained; and
+- the listing complies with these Terms and applicable law.
 
-Reloop is not a general-purpose marketplace unless we expressly announce otherwise.
+Reloop is not a general-purpose marketplace.
 
-### Listing review
+Unless expressly permitted by Reloop, listings must be limited to clothing, footwear, bags, and accessories falling within the categories supported by the platform.
 
-We may use automated systems, including AI-assisted tools, to detect potentially prohibited, fraudulent, misleading, or unsafe listings.
+We may restrict categories, brands, conditions, prices, quantities, or other listing characteristics.
 
-Where a listing is flagged, we may:
+## 7. Prohibited items
 
-- Reject the listing before publication.
-- Request changes.
-- Temporarily hide the listing.
-- Remove the listing.
-- Restrict the account.
-- Refer the matter for human review.
+You must not list or attempt to sell:
 
-Automated moderation does not replace your responsibility to comply with these Terms.
+- counterfeit or imitation goods presented as genuine;
+- stolen property;
+- recalled products where sale is prohibited or otherwise unlawful;
+- illegal goods;
+- dangerous goods;
+- weapons or weapon-related products;
+- drugs or controlled substances;
+- prescription medicines;
+- hazardous materials;
+- products whose sale is prohibited by applicable law;
+- items that infringe intellectual property rights;
+- fraudulent or misleading listings; or
+- any other category prohibited by Reloop.
 
-Where applicable, users may request human review of significant decisions made through automated systems. Further information is provided in our Privacy Policy and applicable notices.
+Reloop may maintain additional prohibited-item rules and may remove items that present legal, safety, fraud, or platform-integrity risks.
 
-## 6. Prices, fees, and payments
+## 8. Listing moderation and AI-assisted review
 
-Sellers determine the sale price of their items subject to any pricing rules or limits displayed by Reloop.
+Reloop may use automated systems, including AI-assisted tools, to review listings and other platform activity.
 
-Reloop may charge service fees, handling fees, payment-related fees, shipping-related charges, or other clearly disclosed fees.
+These systems may be used to identify potentially prohibited, fraudulent, unsafe, misleading, or otherwise non-compliant content.
 
-The applicable fees will be shown to the relevant user before the transaction is completed.
+Automated systems may result in:
 
-### Buyer payments
+- a listing being rejected;
+- a listing being temporarily restricted;
+- a listing being removed;
+- additional information being requested; or
+- activity being referred for human review.
 
-The buyer is responsible for paying:
+Automated systems may make mistakes.
 
-- The purchase price.
-- Applicable buyer/service fees.
-- Applicable shipping charges.
-- Any other charges clearly displayed before checkout.
+Where applicable, users may request human review of certain moderation decisions in accordance with our applicable moderation and appeal procedures.
 
-### Seller proceeds
+Further information about automated processing is provided in our Privacy Policy and AI Use & Transparency Notice.
 
-The amount payable to the seller will be calculated according to the applicable Reloop fee structure displayed before or during the transaction.
+## 9. Buying an item
 
-Where Reloop temporarily holds funds pending shipment verification, the seller does not receive the relevant proceeds until the applicable release conditions have been satisfied.
+When you purchase an item through Reloop, you agree to pay the amount shown at checkout, including any applicable:
 
-### Payment provider
+- item price;
+- shipping charge;
+- Reloop service or handling fee; and
+- applicable taxes or other charges disclosed before payment.
 
-Payments may be processed through Stripe or another payment provider selected by Reloop.
+The purchase contract for the item is generally between the buyer and seller.
 
-Reloop does not intentionally store complete payment-card credentials such as the full card number or CVC when these are processed directly by the payment provider.
+Reloop facilitates the transaction through its platform but does not become the owner of the item merely by facilitating the transaction.
 
-Payment providers may impose their own terms, verification requirements, restrictions, and privacy policies.
+A purchase is only considered completed when the Reloop checkout process confirms the transaction.
 
-### Promotional credits
+If a transaction is cancelled, fails, or is reversed, the applicable consequences are governed by our Refund and Cancellation Policy and applicable law.
 
-Reloop may occasionally provide promotional credits, discounts, coupons, or other promotional benefits.
+## 10. Prices and fees
 
-Unless expressly stated otherwise:
+Sellers select the permitted listing price presented by Reloop.
 
-- Promotional credits have no cash value.
-- Promotional credits cannot be withdrawn.
-- Promotional credits cannot be transferred to another user.
-- Promotional credits cannot be exchanged for cash.
-- One promotional benefit may be available only once per eligible person or account.
-- Reloop may impose an expiry date or minimum purchase requirement.
-- Promotional credits may not be combined with other promotions unless expressly permitted.
+Reloop may charge platform, service, transaction, handling, or other fees.
 
-Reloop may cancel promotional credits obtained through fraud, abuse, multiple accounts, manipulation, or other violations of these Terms.
+The applicable fees will be shown before the relevant transaction is completed.
 
-## 7. Orders and contracts
+Fees charged by Reloop are separate from the price agreed between the buyer and seller for the item.
 
-When a buyer completes checkout, the buyer is making an offer to purchase the selected item or items under the displayed transaction terms.
+Where legally required, applicable taxes will be disclosed or charged.
 
-The sale contract is formed between the buyer and seller in accordance with the applicable transaction flow displayed by Reloop.
+Nothing in these Terms excludes or restricts a consumer's mandatory statutory rights, including any applicable withdrawal, refund, or other rights.
 
-Reloop may cancel or prevent a transaction where:
+## 11. Payments
 
-- Payment fails.
-- The item has already been sold or is unavailable.
-- The listing violates these Terms.
-- Fraud or abuse is suspected.
-- Shipping cannot reasonably be completed.
-- The transaction would violate applicable law.
-- A technical or security issue materially affects the transaction.
+Payments made through Reloop are processed using third-party payment service providers, currently Stripe and its applicable affiliated entities.
 
-Where a transaction is cancelled before completion, applicable payments will be handled according to the Refund Policy and applicable law.
+Reloop does not ordinarily receive or store your complete payment card number or CVC.
 
-## 8. Multi-item carts and bundles
+Payment processing is subject to the applicable terms and privacy practices of the payment provider.
 
-Reloop may allow buyers to add multiple items to a cart.
+Where required for receiving seller payouts, sellers may need to complete identity, account, tax, or other verification procedures through the applicable payment provider.
 
-Where multiple items are purchased from the same seller, Reloop may group those items into a single seller order or shipment where appropriate.
+Reloop may be unable to release or process a seller payout until the required verification has been completed.
 
-Shipping costs may be calculated per seller package rather than per individual item.
+Reloop may also delay, restrict, reverse, or cancel a transaction where reasonably necessary to address fraud, chargebacks, payment disputes, legal obligations, carrier issues, or other legitimate security concerns.
 
-Where multiple sellers are involved, a single checkout may result in multiple underlying seller orders.
+## 12. Seller payouts
 
-The buyer may therefore make one payment while different sellers remain responsible for their respective items and shipments.
+Seller proceeds are processed through the payment infrastructure used by Reloop.
 
-The exact shipping and package arrangements displayed at checkout apply to the transaction.
+Subject to applicable payment-provider rules and legal requirements, seller proceeds may become eligible for payout after the seller has completed the required shipping step and Reloop has received sufficient evidence that the shipment has entered the carrier network.
 
-## 9. Shipping
+The exact timing of payout may depend on:
 
-Sellers must ship sold items within the shipping deadline displayed in the app.
+- carrier information;
+- payment-provider processing;
+- fraud and security checks;
+- account verification;
+- chargebacks or disputes; and
+- other circumstances outside Reloop's reasonable control.
 
-Unless the app expressly states otherwise, the current shipping deadline is 24 hours excluding weekends and applicable public holidays.
+A seller is not guaranteed immediate access to funds merely because a buyer has completed payment.
+
+## 13. Shipping
+
+Sellers must ship sold items within the shipping deadline displayed in the relevant transaction.
+
+Unless otherwise stated in the app, Reloop's current standard shipping deadline is **24 hours, excluding weekends and applicable public holidays**.
+
+The applicable deadline displayed for a particular transaction takes precedence where it differs.
 
 Sellers are responsible for:
 
-- Packaging items appropriately.
-- Using the shipping method specified or made available by Reloop.
-- Sending the item to the correct address or delivery destination.
-- Providing valid tracking information where required.
-- Not deliberately submitting false or invalid tracking information.
+- packaging the item appropriately;
+- using the shipping method provided or required by Reloop;
+- using the correct shipping label or tracking information;
+- handing the parcel to the carrier within the required timeframe; and
+- ensuring that the shipment is addressed correctly.
 
 Reloop may verify tracking information against carrier data.
 
-A tracking number that cannot reasonably be verified may delay release of seller funds.
+A tracking number that cannot reasonably be verified may not be treated as valid proof of shipment.
 
-If a seller fails to ship within the applicable deadline, Reloop may cancel the order and process a refund according to the Refund Policy.
+If a seller does not ship within the applicable deadline, Reloop may cancel the transaction and initiate a refund to the buyer in accordance with our Refund and Cancellation Policy and applicable law.
 
-Reloop is not responsible for delays caused by a carrier after the seller has correctly handed over the package, except where applicable law provides otherwise.
+## 14. Shipping delays, loss, and carrier problems
 
-## 10. Pickup
+Reloop does not control third-party carriers and cannot guarantee a particular delivery time.
 
-Where local pickup is offered, the buyer and seller must follow the pickup instructions displayed by Reloop.
+Where a parcel is delayed, lost, damaged, or otherwise affected by a carrier issue, Reloop may assist the parties and may use available carrier information to determine the appropriate next step.
 
-Users should not exchange sensitive personal information unnecessarily.
+Nothing in these Terms limits statutory rights or remedies that cannot legally be excluded.
 
-Where Reloop provides pickup verification, users must complete the applicable verification steps accurately.
+## 15. Refunds and cancellations
 
-A user must not falsely claim that an item was collected, handed over, or received.
+Refunds, cancellations, failed transactions, seller non-shipment, payment reversals, and other transaction outcomes are governed by our Refund and Cancellation Policy.
 
-Users are responsible for taking reasonable precautions when arranging or completing a local pickup.
+Nothing in these Terms removes any mandatory statutory right to a refund or withdrawal.
 
-Reloop does not guarantee the safety or conduct of users during physical meetings.
+Where a transaction is cancelled before completion, Reloop may reverse or refund the applicable payment in accordance with the circumstances of the cancellation.
 
-## 11. Cancellations and refunds
+Where a consumer has a statutory right of withdrawal in relation to a contract with Reloop, that right is not excluded by these Terms.
 
-Transactions may be cancelled in accordance with the circumstances and procedures described in our Refund Policy.
+## 16. Transactions between private users
 
-Depending on the circumstances, a buyer may receive a full or partial refund.
+Where both buyer and seller are acting as private individuals, consumer-to-business consumer protection rules that apply specifically to contracts between a consumer and a trader may not apply to the item sale itself.
 
-Examples may include:
+Reloop cannot determine every user's legal status in every individual transaction.
 
-- Seller fails to ship.
-- Payment is successfully completed but the order is cancelled.
-- A transaction is cancelled because the item is unavailable.
-- A duplicate payment occurs.
-- A refund is otherwise required by applicable law.
+Users must not falsely claim to be private sellers when they are acting commercially.
 
-Refunds are generally returned through the original payment method where technically possible.
+If you believe a seller is operating commercially while presenting themselves as a private individual, you may report the account to Reloop.
 
-Refund timing may depend on the payment provider and financial institution.
+## 17. Your content
 
-Nothing in these Terms removes or limits rights that cannot legally be excluded.
+You retain ownership of photographs, descriptions, and other content you upload to Reloop.
 
-## 12. Private sellers and consumer-law status
+By uploading content, you grant Reloop a non-exclusive, worldwide, royalty-free licence to host, store, reproduce, display, adapt where technically necessary, and distribute that content for purposes reasonably connected with:
 
-Reloop is intended primarily as a marketplace for private individuals selling their own secondhand items.
+- operating Reloop;
+- displaying listings;
+- providing marketplace functionality;
+- moderation and security;
+- improving the service;
+- customer support; and
+- promoting Reloop.
 
-Private sellers must not use Reloop as a disguised commercial business.
+Where promotional use goes beyond displaying the listing within Reloop, we will only use the content in accordance with the applicable permissions, policies, and legal requirements.
 
-A user may be considered a trader or business under applicable law depending on their actual activities and circumstances, regardless of how they describe themselves.
+You confirm that you have the necessary rights to grant this licence.
 
-If Reloop determines that a user appears to be operating commercially, we may require additional information, verification, disclosures, or compliance steps.
+You must not upload content that:
 
-Where required by law, different rules may apply to transactions involving professional sellers.
+- infringes another person's intellectual property rights;
+- violates another person's privacy or publicity rights;
+- is unlawful;
+- is fraudulent or misleading;
+- contains malicious software; or
+- violates our Community Guidelines.
 
-## 13. Seller responsibilities
-
-Sellers are responsible for:
-
-- The legality of their listings.
-- The accuracy of their descriptions.
-- The condition of their items.
-- Correct shipping.
-- Compliance with applicable tax, consumer, product-safety, and other legal obligations.
-- Providing information required by Reloop or applicable law.
-
-Reloop does not provide tax advice.
-
-Users are responsible for determining whether their activities create tax, registration, reporting, or other legal obligations.
-
-## 14. Content you submit
-
-You retain ownership of photos, descriptions, and other content you upload.
-
-By uploading content to Reloop, you grant Reloop a non-exclusive, worldwide, royalty-free license to host, store, reproduce, adapt where technically necessary, display, and distribute that content for purposes connected with operating, improving, securing, and promoting Reloop.
-
-This may include:
-
-- Displaying your listing to potential buyers.
-- Processing and storing listing images.
-- Creating technical thumbnails or resized versions.
-- Displaying listings in search results.
-- Moderating content.
-- Promoting Reloop listings through Reloop-controlled marketing channels.
-
-We will not sell your listing content as a standalone asset to third parties.
-
-You remain responsible for ensuring that you have the necessary rights to upload the content.
-
-You must not upload content that infringes another person's copyright, trademark, privacy, publicity, or other rights.
-
-You may request deletion of your listing subject to any legal, transaction, fraud-prevention, accounting, or other retention requirements that apply.
-
-## 15. Prohibited conduct
+## 18. Prohibited conduct
 
 You must not:
 
-- List counterfeit goods.
-- List stolen goods.
-- List illegal goods.
-- List recalled or unsafe goods where prohibited.
-- Provide false or misleading information.
-- Manipulate prices or transactions fraudulently.
-- Create fake sales or reviews.
-- Attempt to manipulate the platform's ranking or recommendation systems.
-- Circumvent Reloop's payment system to avoid fees.
-- Arrange off-platform payment for transactions initiated through Reloop where this is intended to evade Reloop fees or protections.
-- Submit false tracking information.
-- Falsely claim an item was shipped, delivered, received, or collected.
-- Harass, threaten, stalk, or discriminate against other users.
-- Attempt to obtain another user's personal information without authorization.
-- Use bots, scrapers, crawlers, or automated systems without our permission.
-- Attempt unauthorized access to Reloop systems.
-- Upload malware or malicious code.
-- Conduct money laundering or other financial crime.
-- Use Reloop to facilitate fraud or other illegal activity.
-- Circumvent account restrictions or bans.
-- Abuse promotional credits.
-- Create multiple accounts to obtain promotional benefits.
-- Attempt to interfere with the operation or security of Reloop.
+- circumvent Reloop's payment system to avoid applicable fees;
+- arrange off-platform payment for a transaction initiated through Reloop;
+- manipulate prices, transactions, reviews, tracking information, or other platform data;
+- submit false tracking information;
+- falsely claim that an item has been shipped;
+- attempt to obtain refunds fraudulently;
+- use stolen payment methods;
+- engage in money laundering or other financial crime;
+- harass, threaten, stalk, or discriminate against other users;
+- collect or misuse another user's personal information;
+- use bots, scrapers, crawlers, or automated systems without our authorization;
+- interfere with Reloop's infrastructure;
+- attempt to access another user's account;
+- reverse engineer or circumvent security measures except where such restriction is prohibited by law;
+- upload malware or malicious code;
+- manipulate platform rankings or recommendations;
+- create multiple accounts to abuse promotions or platform limits; or
+- use Reloop for any unlawful purpose.
 
-## 16. Intellectual property
+## 19. Reviews and ratings
 
-Reloop and its software, branding, logos, designs, interfaces, text, graphics, and other original materials are owned by or licensed to Reloop and are protected by applicable intellectual-property laws.
+Where Reloop provides ratings or reviews, you must provide honest and genuine feedback based on your actual experience.
 
-Except where permitted by law, you may not:
+You must not:
 
-- Copy Reloop's software or interface.
-- Reproduce Reloop branding without permission.
-- Reverse engineer the platform except where legally permitted.
-- Sell, sublicense, or commercially exploit Reloop's proprietary materials.
-- Remove copyright, trademark, or other proprietary notices.
+- submit fake reviews;
+- pay or reward another person for a particular rating;
+- threaten another user to obtain a positive rating;
+- manipulate ratings through multiple accounts; or
+- submit misleading or defamatory content.
 
-## 17. Availability of the service
+Reloop may remove reviews that violate applicable law or our Community Guidelines.
 
-We aim to keep Reloop available and reliable, but we do not guarantee uninterrupted availability.
+## 20. Platform availability
 
-The platform may temporarily be unavailable because of:
+We aim to keep Reloop available and functional, but we do not guarantee uninterrupted availability.
 
-- Maintenance.
-- Software updates.
-- Security incidents.
-- Infrastructure failures.
-- Payment-provider outages.
-- Carrier or third-party service failures.
-- Events outside our reasonable control.
+The service may occasionally be unavailable because of:
 
-We may modify, suspend, or discontinue features where reasonably necessary.
+- maintenance;
+- updates;
+- technical failures;
+- cybersecurity incidents;
+- third-party service failures;
+- carrier or payment-provider problems; or
+- circumstances outside our reasonable control.
 
-Where practical, we will provide notice of material planned interruptions.
+We may modify, suspend, or discontinue individual features where reasonably necessary.
 
-## 18. Third-party services
+Where required by applicable law, users will receive the applicable rights and remedies relating to changes to digital services.
 
-Reloop may depend on third-party services including payment processors, authentication providers, cloud hosting providers, shipping carriers, analytics providers, communication providers, and other infrastructure providers.
+## 21. Third-party services
 
-Examples may include Stripe, Firebase, Google, Apple, Yahoo, shipping carriers, and hosting providers.
+Reloop may rely on third-party services, including payment processors, hosting providers, authentication providers, shipping carriers, mapping services, analytics providers, and fraud-prevention services.
 
-Third-party services may have their own terms and privacy policies.
+Third-party services may have their own terms and policies.
 
-Reloop is not responsible for independent failures or actions of third parties except where liability cannot legally be excluded.
+Reloop is not responsible for failures of third-party services to the extent such failures are outside Reloop's reasonable control, subject always to mandatory statutory rights.
 
-## 19. Fraud, security, and verification
+## 22. Intellectual property
 
-To protect users and the platform, Reloop may use technical systems and manual review to detect:
+The Reloop name, logo, software, interface, visual design, trademarks, graphics, text, and other Reloop-owned materials are protected by applicable intellectual property laws.
 
-- Fraud.
-- Account abuse.
-- Suspicious payments.
-- Fake listings.
-- Counterfeit goods.
-- Suspicious shipping activity.
-- Account takeovers.
-- Promotional abuse.
+Except where permitted by law or expressly authorized by Reloop, you may not:
 
-We may request additional information or verification where reasonably necessary.
+- copy substantial parts of the Reloop platform;
+- reproduce Reloop branding;
+- commercially exploit Reloop's software or content;
+- distribute unauthorized copies of the platform; or
+- use Reloop's intellectual property in a way that suggests an unauthorized association with Reloop.
 
-We may delay, restrict, cancel, or investigate transactions where there is a reasonable security or fraud concern.
+## 23. Moderation, restrictions, and appeals
 
-Where legally required, we may report suspected illegal activity to competent authorities.
+To protect users and the integrity of the marketplace, Reloop may remove content, restrict listings, restrict transactions, suspend accounts, or take other proportionate measures where permitted by law.
 
-## 20. Disclaimers
+Where required by applicable law, we will provide an explanation for relevant moderation or account decisions and information about available complaint or appeal mechanisms.
 
-Reloop provides a marketplace and related services.
+Our Community Guidelines and applicable moderation procedures provide additional information.
 
-Except where liability cannot legally be excluded, Reloop does not guarantee:
+Nothing in this section prevents us from taking immediate action where necessary to address fraud, security threats, illegal activity, or other serious risks.
 
-- That every listing is accurate.
-- That every seller will complete a transaction.
-- That an item will exactly match a seller's description.
-- That an item will be authentic unless Reloop expressly provides an authenticity service.
-- That a seller will ship on time.
-- That another user will behave lawfully or safely.
-- That the platform will always be available.
+## 24. Disclaimers
 
-Reloop does not take ownership of ordinary user-listed items.
+Reloop provides a marketplace and related digital services.
 
-Nothing in these Terms excludes or limits liability that cannot legally be excluded under German or EU law.
+We do not guarantee that:
 
-This includes, where applicable, liability for intent, gross negligence, injury to life, body, or health, and liability under mandatory product-liability laws.
+- every listing is accurate;
+- every seller will ship on time;
+- an item will exactly match its description;
+- every transaction will be completed;
+- a carrier will deliver within a particular timeframe; or
+- the platform will always be available without interruption.
 
-## 21. Limitation of liability
+Reloop does not generally inspect every item before sale and does not guarantee the authenticity, quality, condition, legality, or suitability of an item merely because it is listed on Reloop.
 
-To the maximum extent permitted by applicable law, Reloop is liable only for foreseeable, contract-typical damages caused by a breach of an essential contractual obligation.
+Our moderation, verification, tracking, and dispute tools are designed to reduce risk but cannot eliminate it.
 
-This limitation does not apply where liability is mandatory, including liability arising from intent, gross negligence, injury to life, body, or health, or other circumstances where German or EU law does not permit limitation.
+Nothing in these Terms excludes or limits rights or liability that cannot legally be excluded or limited.
 
-Reloop is not responsible for indirect losses or consequential damages to the extent such exclusion is legally permitted.
+## 25. Liability
 
-Nothing in these Terms affects statutory rights that cannot be excluded or limited.
+Reloop is liable without limitation where liability is mandatory under applicable law, including liability arising from:
 
-## 22. Indemnification
+- intent;
+- gross negligence;
+- injury to life, body, or health;
+- applicable product liability legislation; or
+- other circumstances where German law prohibits limitation of liability.
 
-To the extent permitted by applicable law, you may be responsible for losses or reasonable costs incurred by Reloop where they result from your intentional or negligent violation of these Terms or applicable law.
+For ordinary negligent breaches of essential contractual obligations, Reloop's liability is limited to the foreseeable damage typical for the contract, to the extent permitted by applicable law.
 
-This does not apply to the extent that Reloop caused or contributed to the relevant loss.
+Otherwise, Reloop's liability for ordinary negligence is excluded to the extent permitted by law.
 
-## 23. Account suspension and termination
+Nothing in these Terms affects mandatory statutory rights.
+
+Reloop is generally not responsible for the acts or omissions of individual buyers or sellers, including a user's failure to accurately describe, package, or ship an item, except where Reloop itself has a legal responsibility.
+
+## 26. Indemnification
+
+To the extent permitted by applicable law, you are responsible for losses and reasonable costs incurred by Reloop as a result of your intentional or negligent violation of these Terms or applicable law.
+
+This does not apply where the relevant loss was caused by Reloop's own legal responsibility or where such an indemnification obligation would be prohibited by law.
+
+## 27. Account termination
 
 You may stop using Reloop at any time.
 
-You may request account deletion through the available account settings.
+You may request deletion of your account through the account deletion function provided in the app or by contacting us.
 
-We may temporarily restrict or permanently terminate an account where reasonably necessary because of:
+Account deletion does not automatically cancel or erase obligations arising from transactions that have already taken place.
 
-- Serious or repeated violations of these Terms.
-- Fraud.
-- Illegal activity.
-- Security threats.
-- Payment abuse.
-- Abuse of other users.
-- Attempts to circumvent previous restrictions.
+We may retain information where required or permitted by law, including information necessary for accounting, tax, fraud prevention, dispute resolution, legal claims, or other legal obligations.
 
-Where appropriate, we will notify you of the reason and provide information about available review or appeal procedures.
+Reloop may suspend or terminate an account where permitted by these Terms and applicable law.
 
-Termination does not automatically cancel obligations that arose before termination.
+Where appropriate, we will provide notice and information about the reason and any available review or appeal process.
 
-Transactions already completed or still being processed may continue to be handled where necessary to complete refunds, shipping, payments, fraud investigations, legal obligations, or dispute resolution.
+## 28. Changes to Reloop and these Terms
 
-## 24. Changes to Reloop
+We may update these Terms when reasonably necessary, including because of:
 
-We may introduce, modify, or remove features.
+- changes to Reloop;
+- changes in law;
+- security requirements;
+- changes to payment or shipping infrastructure; or
+- changes to our business model.
 
-Where a change materially affects an existing contractual relationship, we will provide notice where required by law.
+Where a change materially affects your rights or obligations, we will provide appropriate notice before the change takes effect where required by law.
 
-Some changes may be necessary for security, legal compliance, technical reasons, or to improve the service.
+If continued use of Reloop after the effective date constitutes acceptance under applicable law, we will make that clear when notifying you.
 
-## 25. Changes to these Terms
+If you do not accept a material change, you may stop using Reloop and, where applicable, terminate your contractual relationship with us.
 
-We may update these Terms from time to time.
+## 29. Governing law
 
-Where legally required, we will notify users of material changes before they take effect and provide the applicable opportunity to object or terminate the affected contractual relationship.
+German law applies to these Terms.
 
-The version applicable to a transaction will generally be the version accepted or applicable when the transaction was entered into, subject to mandatory law.
+If you are a consumer habitually resident in another country of the European Union, this choice of German law does not deprive you of protections that cannot be excluded by agreement under the mandatory law of your country of habitual residence.
 
-The current version will be made available through the Reloop app or website.
+## 30. Dispute resolution
 
-## 26. Complaints and disputes
+We encourage users to contact Reloop first so that we can attempt to resolve complaints directly.
 
-If you have a problem with Reloop, please contact us first:
+You can contact us at:
 
-Email: praiseangel509@gmail.com
+**praiseangel509@gmail.com**
 
-Please include:
+Reloop is WILLING / NOT WILLING - COMPLETE BEFORE PUBLICATION to participate in dispute resolution proceedings before a consumer arbitration board where required or permitted by applicable law.
 
-- Your account email.
-- Relevant order or listing information.
-- A description of the problem.
-- Any supporting information reasonably necessary to investigate the issue.
+Any applicable information regarding alternative dispute resolution will be provided in accordance with German law.
 
-We will review complaints and respond within a reasonable period.
+The former European Commission Online Dispute Resolution (ODR) platform is no longer available and is therefore not referenced in these Terms.
 
-Users may have additional statutory rights to pursue claims before competent courts or alternative dispute-resolution bodies.
+## 31. Severability
 
-## 27. Alternative dispute resolution
+If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions remain effective to the extent permitted by law.
 
-The European Commission's former Online Dispute Resolution (ODR) platform is no longer available for new complaints following its discontinuation in 2025.
-
-If Reloop is legally required to participate in a particular consumer dispute-resolution procedure, the applicable information and contact details will be provided in the required legal notices.
-
-Reloop is currently:
-
-WILLING / NOT WILLING — DECIDE AND FILL IN
-
-to participate in dispute-resolution proceedings before a competent consumer arbitration board, to the extent permitted and required by applicable law.
-
-## 28. Governing law
-
-These Terms are governed by German law.
-
-If you are a consumer, this choice of law does not deprive you of mandatory consumer protections granted to you by the law of the country in which you have your habitual residence, where applicable.
-
-Nothing in these Terms restricts statutory rights available to consumers under applicable EU or German law.
-
-## 29. Jurisdiction
-
-If you are a consumer, mandatory jurisdiction rules applicable to consumers will apply.
-
-You may generally bring proceedings before the courts having jurisdiction under applicable consumer-protection law.
-
-If you are acting as a business or trader, the competent courts will be determined according to applicable law and any legally valid jurisdiction agreement.
-
-## 30. Severability
-
-If any provision of these Terms is found to be invalid, unlawful, or unenforceable, the remaining provisions will remain in effect to the extent permitted by law.
-
-The invalid provision will be replaced or interpreted, where legally possible, in a manner that most closely reflects its original purpose while complying with applicable law.
-
-## 31. No waiver
-
-If Reloop does not immediately enforce a provision of these Terms, this does not mean that Reloop has waived its right to enforce that provision later.
+The invalid or unenforceable provision will be replaced or interpreted in a manner that comes as close as legally possible to achieving its original purpose.
 
 ## 32. Entire agreement
 
-These Terms, together with the Privacy Policy, Refund Policy, and any other policies expressly incorporated into them, govern your use of Reloop.
+These Terms, together with the policies and contractual documents expressly incorporated into them, constitute the agreement governing your use of Reloop, subject to mandatory statutory rights.
 
-Additional terms may apply to particular features, promotions, or services and will be presented where applicable.
+No provision of these Terms is intended to exclude rights that cannot legally be excluded.
 
 ## 33. Contact
 
-Questions, complaints, or legal notices concerning these Terms can be sent to:
+For questions, complaints, legal notices, or other matters concerning these Terms:
 
-Malvin AI
+**malvinai**  
+**im waager 41 72581**  
+**praiseangel509@gmail.com**
 
-im waager 41 72581 Dettingen an Der Erms
-
-Email: praiseangel509@gmail.com
-
-## 34. Important legal information
-
-These Terms are intended to provide a clear framework for use of the Reloop platform.
-
-They do not replace mandatory statutory rights.
-
-Where applicable law grants a user rights that conflict with these Terms, the statutory rights prevail.
-
-This document is a draft and must be reviewed and finalized by qualified German/EU legal counsel before publication.
-
+Additional provider information is available in our Impressum.
 `;

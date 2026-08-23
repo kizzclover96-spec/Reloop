@@ -102,7 +102,7 @@ export default function CartCheckout({ listingIds, buyerName, total, onClose, on
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 60, display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 60, display: "flex", flexDirection: "column", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div
         style={{
           display: "flex",

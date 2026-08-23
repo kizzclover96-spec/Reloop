@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "909293528446",
+    "project_id": "reloop-72656",
+    "storage_bucket": "reloop-72656.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:909293528446:android:2726cdc6de87d5ed8e7f2f",
+        "android_client_info": {
+          "package_name": "com.malvin.reloop"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "909293528446-qfiro27i0rrdccfbm5cm84b1hcd7dcis.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.malvin.reloop",
+            "certificate_hash": "a9f73087b9b3c1977dbf0031edb07a6296baec8b"
+          }
+        },
+        {
+          "client_id": "909293528446-m9f51htdra4oi5t76bjg3ivpi1ivpsbl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-G-qKzMUVpqJ2anOO_jo-FYWBHDHQ1cw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "909293528446-m9f51htdra4oi5t76bjg3ivpi1ivpsbl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

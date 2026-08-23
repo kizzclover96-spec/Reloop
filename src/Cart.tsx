@@ -18,7 +18,7 @@ const SIZE_RANK: Record<PackageSize, number> = { small: 0, medium: 1, large: 2 }
 
 export default function Cart({ listings, buyer, onClose }: CartProps) {
   const { t } = useLanguage();
-  const { itemIds, removeItem, clear } = useCart();
+  const { itemIds, addItem, removeItem, clear } = useCart();
   const [showCheckout, setShowCheckout] = useState(false);
   const [justPaid, setJustPaid] = useState(false);
 
@@ -72,7 +72,7 @@ export default function Cart({ listings, buyer, onClose }: CartProps) {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 55, display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "fixed", inset: 0, background: COLOR.bg, zIndex: 55, display: "flex", flexDirection: "column", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div
         style={{
           display: "flex",
