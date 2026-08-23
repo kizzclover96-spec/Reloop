@@ -10,11 +10,20 @@ service firebase.storage {
       // Anyone can view listing photos — it's a public marketplace.
       allow read: if true;
 
-      // Only the signed-in owner can upload into their own folder.
-      // Hard caps here back up the client-side compression: max 2MB per file,
-      // JPEG or WebP only (the two formats the app actually produces).
+      // Only the signed-in owner can upload into their own folder, and only
+      // once they've reserved this exact listingId via reserveListingSlot
+      // (functions/index.js) — the actual Firestore listing doc doesn't
+      // exist yet at upload time (photos upload before the final "create
+      // listing" submit), so this reservation doc is what Storage checks
+      // instead. Without it, an authenticated user could otherwise upload
+      // to any made-up listingId under their own uid indefinitely, without
+      // ever creating a real listing, purely to run up storage costs.
+      // Hard caps here back up the client-side compression: max 2MB per
+      // file, JPEG or WebP only (the two formats the app actually produces).
       allow create: if request.auth != null
                     && request.auth.uid == uid
+                    && firestore.exists(/databases/(default)/documents/listingDrafts/$(listingId))
+                    && firestore.get(/databases/(default)/documents/listingDrafts/$(listingId)).data.uid == uid
                     && request.resource.size < 2 * 1024 * 1024
                     && (request.resource.contentType == 'image/jpeg'
                         || request.resource.contentType == 'image/webp');

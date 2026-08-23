@@ -196,70 +196,117 @@ async function markCartPaid(paymentIntent) {
     }
   }
 
-  const batch = db.batch();
   const now = Date.now();
+  let wonItems = [];
+  let lostItems = [];
 
-  for (const item of cart.items) {
-    const listingRef = db.collection("listings").doc(item.listingId);
-    const orderRef = db.collection("orders").doc();
-    batch.set(orderRef, {
-      listingId: item.listingId,
-      receiptCode: generateReceiptCode(),
-      cartGroupId: groupIdBySeller.get(item.sellerId),
-      listing: {
-        brand: item.brand,
-        title: item.title,
-        image: item.image,
-        price: (item.itemCents + item.shippingCents) / 100,
-      },
-      buyerId,
-      buyerName: cart.buyerName || "",
-      sellerId: item.sellerId,
-      sellerName: item.sellerName,
-      status: "awaiting_shipment",
-      createdAt: now,
-      shipByAt: computeShipDeadline(now),
-      completedAt: null,
-      paymentIntentId: paymentIntent.id,
-      paymentStatus: "paid",
-      giveaway: item.giveaway,
-      packageSize: item.packageSize,
-      shippingCost: item.shippingCents / 100,
-      sellerEarned: item.sellerEarnedCents / 100,
-      shippingAddress,
+  // A plain batch write (the old implementation) commits blindly — it has
+  // no way to check "is this still available?" as part of the same atomic
+  // operation, so two concurrent purchases (a single-item sale and a cart
+  // checkout, or two carts) could both successfully delete-and-resell the
+  // same listing. A transaction is what actually prevents that: Firestore
+  // guarantees that if this transaction's reads are invalidated by another
+  // write that landed first, this transaction retries and sees the real,
+  // current state — so "still active" here is a real guarantee, not a
+  // hopeful check.
+  await db.runTransaction(async (tx) => {
+    wonItems = [];
+    lostItems = [];
+    const listingRefs = cart.items.map((item) => db.collection("listings").doc(item.listingId));
+    const snaps = await Promise.all(listingRefs.map((ref) => tx.get(ref)));
+
+    cart.items.forEach((item, i) => {
+      const snap = snaps[i];
+      const stillActive = snap.exists && snap.data().status === "active";
+      (stillActive ? wonItems : lostItems).push(item);
     });
-    batch.delete(listingRef);
-  }
 
-  batch.update(cartRef, { consumed: true, consumedAt: now });
-  await batch.commit();
+    for (const item of wonItems) {
+      const listingRef = db.collection("listings").doc(item.listingId);
+      const orderRef = db.collection("orders").doc();
+      tx.set(orderRef, {
+        listingId: item.listingId,
+        receiptCode: generateReceiptCode(),
+        cartGroupId: groupIdBySeller.get(item.sellerId),
+        listing: {
+          brand: item.brand,
+          title: item.title,
+          image: item.image,
+          price: (item.itemCents + item.shippingCents) / 100,
+        },
+        buyerId,
+        buyerName: cart.buyerName || "",
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
+        status: "awaiting_shipment",
+        createdAt: now,
+        shipByAt: computeShipDeadline(now),
+        completedAt: null,
+        paymentIntentId: paymentIntent.id,
+        paymentStatus: "paid",
+        giveaway: item.giveaway,
+        packageSize: item.packageSize,
+        shippingCost: item.shippingCents / 100,
+        sellerEarned: item.sellerEarnedCents / 100,
+        shippingAddress,
+      });
+      tx.delete(listingRef);
+    }
 
+    tx.update(cartRef, { consumed: true, consumedAt: now, wonCount: wonItems.length, lostCount: lostItems.length });
+  });
+
+  // Photo cleanup only for items that actually sold — a lost item's listing
+  // (and its photos) still belongs to whoever legitimately won it, or is
+  // simply still live if it was some other anomaly.
   const bucket = getStorage().bucket();
   await Promise.all(
-    cart.items.map((item) =>
+    wonItems.map((item) =>
       bucket
         .deleteFiles({ prefix: `listings/${item.sellerId}/${item.listingId}/` })
         .catch((err) => console.error("Failed to delete listing photos after cart sale:", err))
     )
   );
 
-  const totalPaid = (paymentIntent.amount / 100).toFixed(2);
-  await notifyUser(buyerId, {
-    type: "purchase",
-    title: "Payment successful",
-    body: `Your payment of €${totalPaid} for ${cart.items.length} item${cart.items.length > 1 ? "s" : ""} went through. Head to Profile → Receipts to see it.`,
-    data: { screen: "receipts" },
-  });
+  // Refund exactly the lost items' share of the payment — never the whole
+  // cart total, since the won items were genuinely charged for and did sell.
+  if (lostItems.length > 0) {
+    const lostCents = lostItems.reduce((sum, item) => sum + item.itemCents + item.shippingCents, 0);
+    try {
+      const stripe = getStripe(STRIPE_SECRET_KEY.value());
+      await stripe.refunds.create({ payment_intent: paymentIntent.id, amount: lostCents });
+    } catch (err) {
+      console.error(`Failed to refund lost cart items for ${paymentIntent.id}:`, err.message);
+    }
+  }
+
+  if (wonItems.length > 0) {
+    const totalPaid = (wonItems.reduce((sum, item) => sum + item.itemCents + item.shippingCents, 0) / 100).toFixed(2);
+    await notifyUser(buyerId, {
+      type: "purchase",
+      title: "Payment successful",
+      body: `Your payment of €${totalPaid} for ${wonItems.length} item${wonItems.length > 1 ? "s" : ""} went through. Head to Profile → Receipts to see it.`,
+      data: { screen: "receipts" },
+    });
+  }
+  if (lostItems.length > 0) {
+    await notifyUser(buyerId, {
+      type: "purchase_failed",
+      title: lostItems.length === cart.items.length ? "Items no longer available" : "Some items were already sold",
+      body: `${lostItems.length} item${lostItems.length > 1 ? "s" : ""} in your cart sold to someone else first. You've been refunded for ${lostItems.length > 1 ? "those" : "that one"}.`,
+      data: {},
+    });
+  }
 
   const sellerItemCounts = new Map();
-  for (const item of cart.items) {
+  for (const item of wonItems) {
     sellerItemCounts.set(item.sellerId, (sellerItemCounts.get(item.sellerId) || 0) + 1);
   }
   await Promise.all(
     Array.from(sellerItemCounts.entries()).map(([sellerId, count]) =>
       notifyUser(sellerId, {
         type: "sale",
-        title: count > 1 ? "You made a sale!" : "You made a sale!",
+        title: "You made a sale!",
         body: `${count} item${count > 1 ? "s" : ""} just sold. Ship within 24 business hours to get paid.`,
         data: { screen: "pickup" },
       })

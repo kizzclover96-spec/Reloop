@@ -30,6 +30,11 @@ function sanitizeText(input, maxLength = 2000) {
 // numbers for a good UX, but these are the versions that actually can't be bypassed.
 const MAX_PHOTOS_PER_LISTING = 5;
 const MAX_ACTIVE_LISTINGS_PER_USER = 25;
+// A "draft" (see reserveListingSlot below) doesn't count against the active
+// listing cap — it isn't a real listing yet, and most get finished quickly —
+// but it needs its own modest cap so someone can't reserve hundreds of slots
+// and never finish any of them, just to hold storage folders open.
+const MAX_OPEN_DRAFTS_PER_USER = 10;
 
 // Rate limiting — separate from the total-active cap above. This is about
 // *speed*, not total count: stops a script from creating 25 listings in a
@@ -39,10 +44,12 @@ const MAX_LISTINGS_PER_ROLLING_HOUR = 10;
 
 // If the moderation check itself fails (API down, quota hit, bad response —
 // not "the listing got rejected", but the check couldn't run at all), should
-// listing creation still go through? true = don't let a moderation outage
-// take down the whole marketplace. Flip to false for stricter fail-closed
-// behavior (blocks listing creation whenever the check can't run).
-const MODERATION_FAIL_OPEN = true;
+// listing creation still go through? false = fail closed: a moderation
+// outage blocks new listings rather than letting anything unmoderated go
+// live. This is the correct default once real transactions are involved —
+// flip to true only if you specifically want moderation-outage resilience
+// to take priority over screening, which isn't the right tradeoff for launch.
+const MODERATION_FAIL_OPEN = false;
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
@@ -82,6 +89,54 @@ async function checkAndRecordRateLimit(uid) {
  * count, and content moderation are actually enforced against real data —
  * not whatever the client happened to send.
  */
+/**
+ * Reserves a listing-draft slot BEFORE the client uploads any photos.
+ * storage.rules checks for this doc's existence (and matching uid) before
+ * allowing an upload into listings/{uid}/{listingId}/ — without it, an
+ * authenticated user could otherwise spam arbitrary photo uploads under
+ * made-up listing IDs indefinitely, without ever creating a real listing,
+ * purely to run up storage costs. The listing doc itself doesn't exist yet
+ * at this point (that only happens at final submit, in createListing below),
+ * so this is what Storage rules check against instead.
+ *
+ * Deliberately separate from the active-listing cap — a draft isn't a real
+ * listing yet — but still capped on its own (MAX_OPEN_DRAFTS_PER_USER), so
+ * someone can't just reserve hundreds of slots instead. Stale drafts older
+ * than 24h are swept on every call, so this is self-cleaning without needing
+ * a separate scheduled function.
+ */
+exports.reserveListingSlot = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+
+  const { draftId } = request.data || {};
+  if (!draftId || typeof draftId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing draft id.");
+  }
+
+  const draftsRef = db.collection("listingDrafts");
+  const mine = await draftsRef.where("uid", "==", uid).get();
+
+  const staleBefore = Date.now() - 24 * 60 * 60 * 1000;
+  const stale = mine.docs.filter((d) => (d.data().createdAtMs || 0) < staleBefore);
+  if (stale.length > 0) {
+    const cleanupBatch = db.batch();
+    stale.forEach((d) => cleanupBatch.delete(d.ref));
+    await cleanupBatch.commit();
+  }
+
+  const openCount = mine.size - stale.length;
+  if (openCount >= MAX_OPEN_DRAFTS_PER_USER) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `You have ${MAX_OPEN_DRAFTS_PER_USER} unfinished listings open already. Finish or back out of one first.`
+    );
+  }
+
+  await draftsRef.doc(draftId).set({ uid, createdAtMs: Date.now() });
+  return { reserved: true };
+});
+
 exports.createListing = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 60 }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
@@ -108,6 +163,39 @@ exports.createListing = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 60 }
     if (typeof url !== "string" || !url.includes(expectedPathPart)) {
       throw new HttpsError("permission-denied", "Photos must belong to this listing.");
     }
+  }
+
+  // The client only ever offers these exact choices — a direct call to this
+  // function bypassing the UI should not be able to set anything else,
+  // since price and packageSize flow straight into the Stripe PaymentIntent
+  // amount and the seller's payout calculation at checkout.
+  const VALID_PRICE_TIERS = [3, 6, 9, 12, 15, 20, 23, 25, 27, 29, 30];
+  const VALID_PACKAGE_SIZES = ["small", "medium", "large"];
+  const VALID_CATEGORIES = ["Dresses", "Tops", "Bottoms", "Footwear", "Jackets", "Bags", "Accessories", "Electronics", "Hardware", "Books"];
+
+  if (typeof data.title !== "string" || data.title.trim().length === 0) {
+    throw new HttpsError("invalid-argument", "A title is required.");
+  }
+  if (!VALID_CATEGORIES.includes(data.category)) {
+    throw new HttpsError("invalid-argument", "Invalid category.");
+  }
+  if (!VALID_PACKAGE_SIZES.includes(data.packageSize)) {
+    throw new HttpsError("invalid-argument", "Invalid package size.");
+  }
+  if (data.giveaway !== undefined && typeof data.giveaway !== "boolean") {
+    throw new HttpsError("invalid-argument", "Invalid giveaway flag.");
+  }
+  if (data.giveaway) {
+    // A giveaway's buyer-facing price is always the flat claim fee, computed
+    // at checkout time (functions/checkout.js) — never taken from client
+    // input either way, but the stored listing price should still be a
+    // clean 0 rather than whatever arbitrary number was sent.
+    data.price = 0;
+  } else if (typeof data.price !== "number" || !VALID_PRICE_TIERS.includes(data.price)) {
+    throw new HttpsError("invalid-argument", "Invalid price.");
+  }
+  if (data.was !== undefined && (typeof data.was !== "number" || data.was < 0 || data.was > 100000)) {
+    throw new HttpsError("invalid-argument", "Invalid retail price.");
   }
 
   const activeCount = await db
@@ -159,7 +247,13 @@ exports.createListing = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 60 }
     sellerId: uid,
     status: "active",
     createdAt: Date.now(),
+    likeCount: 0, // always starts real — never taken from client input, only ever changed by functions/likes.js
   });
+
+  // The reservation (see reserveListingSlot above) has done its job — a
+  // real listing now exists at this id, so Storage rules don't need the
+  // draft doc anymore.
+  await db.collection("listingDrafts").doc(id).delete().catch(() => {});
 
   await notifyUser(uid, {
     type: "listing_created",
@@ -175,9 +269,25 @@ exports.createListing = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 60 }
  * One-time sample-catalog seed, also routed through a function since direct
  * client creates on /listings are denied.
  */
+// There's no custom-claims admin-role system in this project yet, and
+// building one just to gate this one function would be more moving parts
+// than the problem needs. An explicit email allowlist is simple and can't
+// be silently misconfigured the way an unset custom claim could be.
+// Update this if the platform owner's account ever changes.
+const ADMIN_EMAILS = ["kizzclover96@gmail.com"];
+
 exports.seedListings = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+
+  // Without this, any authenticated user could call this directly (it's a
+  // public Cloud Function endpoint regardless of whether the app's UI
+  // exposes a button for it) to inject arbitrary listings — with none of
+  // createListing's validation, moderation, ownership checks, or rate
+  // limiting — straight onto the live public marketplace.
+  if (!ADMIN_EMAILS.includes(request.auth.token.email)) {
+    throw new HttpsError("permission-denied", "Not available.");
+  }
 
   const { items } = request.data || {};
   if (!Array.isArray(items)) {
@@ -346,3 +456,8 @@ const pushTokens = require("./pushTokens");
 exports.registerPushToken = pushTokens.registerPushToken;
 exports.unregisterPushToken = pushTokens.unregisterPushToken;
 exports.onUserCreated = pushTokens.onUserCreated;
+
+// Authoritative like-count maintenance — see likes.js
+const likes = require("./likes");
+exports.onLikeCreated = likes.onLikeCreated;
+exports.onLikeDeleted = likes.onLikeDeleted;

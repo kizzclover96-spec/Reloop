@@ -13,6 +13,9 @@ import {
   Shirt,
   Grid3x3,
   Glasses,
+  Smartphone,
+  Wrench,
+  BookOpen,
   AlertCircle,
   ShoppingCart,
 } from "lucide-react";
@@ -31,6 +34,7 @@ import {
   seedListingsIfEmpty,
   uploadListingPhoto,
   newListingId,
+  reserveListingSlot,
   MAX_PHOTOS_PER_LISTING,
   MAX_ACTIVE_LISTINGS_PER_USER,
 } from "./data/listings";
@@ -44,7 +48,9 @@ import ProductView from "./ProductView";
 import ProfileScreen from "./ProfileScreen";
 import Notifications from "./Notifications";
 import Tutorial from "./Tutorial";
+import Welcome from "./Welcome";
 import { useUserNotifications } from "./data/notifications";
+import { useUserLikes, toggleLike } from "./data/likes";
 import LoginScreen from "./LoginScreen";
 import AddressSetup from "./AddressSetup";
 import { useUserAddress } from "./data/address";
@@ -75,6 +81,9 @@ const CATEGORIES = [
   { name: "Jackets", labelKey: "category.jackets", Icon: JacketIcon },
   { name: "Bags", labelKey: "category.bags", Icon: BagIcon },
   { name: "Accessories", labelKey: "category.accessories", Icon: Glasses },
+  { name: "Electronics", labelKey: "category.electronics", Icon: Smartphone },
+  { name: "Hardware", labelKey: "category.hardware", Icon: Wrench },
+  { name: "Books", labelKey: "category.books", Icon: BookOpen },
 ];
 
 // The real, selectable categories a seller can tag a listing with — everything
@@ -209,6 +218,46 @@ function HeartButton({ active, onClick, size = 17 }) {
         fill={active ? COLOR.oxblood : "none"}
         strokeWidth={1.6}
       />
+    </button>
+  );
+}
+
+/**
+ * Frosted-glass pill, top-right of a listing card: heart + total like count.
+ * The count is never a local guess — it's whatever's on listing.likeCount,
+ * which only ever changes via the onLikeCreated/onLikeDeleted Cloud
+ * Function triggers (functions/likes.js), so it reflects everyone's likes,
+ * not just this device's.
+ */
+function LikePill({ active, count, onClick, size = 13 }) {
+  const { t } = useLanguage();
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation(); // cards are wrapped in their own onClick to open the product — a like tap shouldn't also navigate
+        onClick();
+      }}
+      aria-label={active ? t("common.removeFromFavourites") : t("common.addToFavourites")}
+      style={{
+        position: "absolute",
+        top: 8,
+        right: 8,
+        zIndex: 2,
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        background: "rgba(255,255,255,0.55)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        border: "0.5px solid rgba(255,255,255,0.7)",
+        borderRadius: 20,
+        padding: "5px 9px",
+        cursor: "pointer",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      }}
+    >
+      <Heart size={size} color={active ? "#D64545" : "#111"} fill={active ? "#D64545" : "none"} strokeWidth={1.8} />
+      <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: "#111", lineHeight: 1 }}>{count || 0}</span>
     </button>
   );
 }
@@ -485,9 +534,7 @@ function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, 
               <div key={p.id}>
                 <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onSelectProduct(p.id)}>
                   <Swatch gradient={p.images[0]} radius={10} />
-                  <div style={{ position: "absolute", top: 6, right: 6 }} onClick={(e) => e.stopPropagation()}>
-                    <HeartButton active={favourites.has(p.id)} onClick={() => toggleFav(p.id)} size={15} />
-                  </div>
+                  <LikePill active={favourites.has(p.id)} count={p.likeCount} onClick={() => toggleFav(p.id)} size={13} />
                 </div>
                 <div style={{ fontFamily: SANS, fontSize: 12, color: COLOR.ink, marginTop: 6 }}>{p.seller.name}</div>
                 <div style={{ fontFamily: SANS, fontSize: 12, color: COLOR.inkSoft }}>
@@ -508,7 +555,7 @@ function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, 
 /* ---------------------------------------------------------------
    Discover — masonry photo feed
 --------------------------------------------------------------- */
-function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFilter, setCategoryFilter, searchKeyword, setSearchKeyword, goList }) {
+function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFilter, setCategoryFilter, searchKeyword, setSearchKeyword, goList, favourites, toggleFav }) {
   const { t } = useLanguage();
   const [filterOpen, setFilterOpen] = useState(false);
   const [keywordInput, setKeywordInput] = useState(searchKeyword || "");
@@ -706,10 +753,11 @@ function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFi
               {filtered.map((p) => (
                 <div
                   key={p.id}
-                  style={{ breakInside: "avoid", marginBottom: 8, cursor: "pointer" }}
+                  style={{ breakInside: "avoid", marginBottom: 8, cursor: "pointer", position: "relative" }}
                   onClick={() => onSelectProduct(p.id)}
                 >
                   <Swatch gradient={p.images[0]} size="100%" radius={14} ratio={p.ratio} />
+                  <LikePill active={favourites.has(p.id)} count={p.likeCount} onClick={() => toggleFav(p.id)} />
                 </div>
               ))}
             </div>
@@ -875,6 +923,19 @@ function ListScreen({ user, listings }) {
   const { t } = useLanguage();
   const [uploads, setUploads] = useState([]); // { id, url?, uploading, error? }
   const [draftId, setDraftId] = useState(() => newListingId());
+  const [draftReserveError, setDraftReserveError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setDraftReserveError("");
+    reserveListingSlot(draftId).catch((err) => {
+      if (!cancelled) setDraftReserveError(err?.message || "Couldn't start a new listing right now.");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [draftId]);
+
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(null);
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
@@ -1104,6 +1165,21 @@ function ListScreen({ user, listings }) {
             }}
           >
             {t("list.limitWarning", { limit: MAX_ACTIVE_LISTINGS_PER_USER })}
+          </p>
+        )}
+        {draftReserveError && (
+          <p
+            style={{
+              fontFamily: SANS,
+              fontSize: 12,
+              color: "#B23A3A",
+              background: "#FBEAEA",
+              borderRadius: 8,
+              padding: "10px 12px",
+              marginBottom: 16,
+            }}
+          >
+            {draftReserveError}
           </p>
         )}
         <p style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, letterSpacing: "0.04em", color: COLOR.ink, marginBottom: 10, display: "flex", alignItems: "center" }}>
@@ -1766,7 +1842,6 @@ export default function App() {
   const { t } = useLanguage();
   const { listings, loading: listingsLoading } = useListings();
   const [active, setActive] = useState("home");
-  const [favourites, setFavourites] = useState(new Set());
   const [selectedId, setSelectedId] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState(null);
@@ -1775,6 +1850,14 @@ export default function App() {
   const [showCart, setShowCart] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (Capacitor.isNativePlatform()) return false;
+    try {
+      return localStorage.getItem("reloopWelcomeSeen") !== "1";
+    } catch {
+      return false;
+    }
+  });
   const [pushPrimer, setPushPrimer] = useState(false);
   const [notificationTarget, setNotificationTarget] = useState(null);
   const { unreadCount: unreadNotifications } = useUserNotifications(user?.uid);
@@ -1818,12 +1901,11 @@ export default function App() {
     }
   }, [listings, listingsLoading]);
 
+  const { liked: favourites } = useUserLikes(user?.uid);
+
   const toggleFav = (id) => {
-    setFavourites((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    if (!user) return;
+    toggleLike(user.uid, id, favourites.has(id)).catch((err) => console.warn("Failed to toggle like:", err));
   };
 
   const handleSeed = async () => {
@@ -1831,6 +1913,12 @@ export default function App() {
     setSeeding(true);
     try {
       await seedListingsIfEmpty(user.uid, user.displayName || user.email || "You");
+    } catch (err) {
+      // Expected for ordinary users now — seedListings is admin-only
+      // server-side (see functions/index.js). Failing quietly here is
+      // correct: this was always just an empty-state nicety, never a core
+      // flow, and it was already becoming moot in practice once any real
+      // listings existed anywhere (the function no-ops in that case too).
     } finally {
       setSeeding(false);
     }
@@ -1899,6 +1987,8 @@ export default function App() {
           searchKeyword={searchKeyword}
           setSearchKeyword={setSearchKeyword}
           goList={goList}
+          favourites={favourites}
+          toggleFav={toggleFav}
         />
       ),
       list: <ListScreen user={user} listings={listings} />,
@@ -2041,6 +2131,22 @@ export default function App() {
       </div>
     </div>
   );
+
+  if (showWelcome) {
+    return (
+      <>
+        {FONT_LINK}
+        <Welcome
+          onContinue={() => {
+            try {
+              localStorage.setItem("reloopWelcomeSeen", "1");
+            } catch {}
+            setShowWelcome(false);
+          }}
+        />
+      </>
+    );
+  }
 
   if (isMobile) {
     return (

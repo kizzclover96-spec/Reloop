@@ -21,6 +21,14 @@ function getStripe(key) {
  * Refunds only THIS order's own price (its item + its share of shipping) —
  * never the whole PaymentIntent — since a multi-item cart PaymentIntent can
  * cover other orders that are still active and shouldn't be touched.
+ *
+ * Claims the order via a transaction before doing anything else — the same
+ * pattern submitShipment.js uses to claim into "shipment_processing". This
+ * is what actually prevents a cancellation and a shipment verification from
+ * both succeeding on the same order: whichever of the two transactions
+ * reaches Firestore first wins the transition out of "awaiting_shipment",
+ * and the other sees the order already claimed and fails cleanly — instead
+ * of both a refund AND a seller payout happening for the same money.
  */
 exports.cancelOrder = onCall({ secrets: [STRIPE_SECRET_KEY] }, async (request) => {
   const uid = request.auth?.uid;
@@ -32,33 +40,52 @@ exports.cancelOrder = onCall({ secrets: [STRIPE_SECRET_KEY] }, async (request) =
   }
 
   const orderRef = db.collection("orders").doc(orderId);
-  const orderSnap = await orderRef.get();
-  if (!orderSnap.exists) throw new HttpsError("not-found", "Order not found.");
-  const order = orderSnap.data();
+  let order;
 
-  if (order.buyerId !== uid && order.sellerId !== uid) {
-    throw new HttpsError("permission-denied", "Not your order.");
-  }
-  if (order.status !== "awaiting_shipment") {
-    throw new HttpsError("failed-precondition", "ALREADY_PROCESSED");
-  }
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(orderRef);
+    if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
+    order = snap.data();
 
-  if (order.paymentIntentId && order.listing?.price > 0) {
-    const stripe = getStripe(STRIPE_SECRET_KEY.value());
-    try {
-      await stripe.refunds.create({
-        payment_intent: order.paymentIntentId,
-        amount: Math.round(order.listing.price * 100),
-      });
-    } catch (err) {
-      console.error("Refund failed during cancellation:", err.message);
-      throw new HttpsError("internal", "REFUND_FAILED");
+    if (order.buyerId !== uid && order.sellerId !== uid) {
+      throw new HttpsError("permission-denied", "Not your order.");
     }
+    if (order.status !== "awaiting_shipment") {
+      throw new HttpsError("failed-precondition", "ALREADY_PROCESSED");
+    }
+
+    tx.update(orderRef, { status: "cancelling" });
+  });
+
+  try {
+    if (order.paymentIntentId && order.listing?.price > 0) {
+      const stripe = getStripe(STRIPE_SECRET_KEY.value());
+      await stripe.refunds.create(
+        {
+          payment_intent: order.paymentIntentId,
+          amount: Math.round(order.listing.price * 100),
+        },
+        // Deterministic key: if this exact refund is ever attempted twice
+        // (e.g. the refund actually succeeded but the Firestore update just
+        // below failed, and this gets retried), Stripe returns the original
+        // refund instead of refunding the buyer twice.
+        { idempotencyKey: `cancel-refund-${orderId}` }
+      );
+    }
+
+    await orderRef.update({ status: "cancelled", cancelledAt: Date.now() });
+    return { cancelled: true, refunded: true };
+  } catch (err) {
+    console.error("Refund failed during cancellation:", err.message);
+    // Release the claim so this can be retried rather than leaving the
+    // order permanently stuck in "cancelling" limbo. Safe even if the
+    // refund itself actually went through right before some later step
+    // failed — the idempotency key above means a retry can't double-refund.
+    await orderRef.update({ status: "awaiting_shipment" }).catch((revertErr) => {
+      console.error("Failed to revert cancelling claim after error:", revertErr.message);
+    });
+    throw new HttpsError("internal", "REFUND_FAILED");
   }
-
-  await orderRef.update({ status: "cancelled", cancelledAt: Date.now() });
-
-  return { cancelled: true, refunded: true };
 });
 
 module.exports = { cancelOrder: exports.cancelOrder };

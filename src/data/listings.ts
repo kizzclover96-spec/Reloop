@@ -63,6 +63,17 @@ export function newListingId(): string {
 }
 
 /**
+ * Reserves this listing id before any photos upload — storage.rules
+ * requires this to exist (and match the caller's uid) before allowing an
+ * upload into listings/{uid}/{listingId}/. Must be called once, before the
+ * first photo upload attempt for a given draftId.
+ */
+export async function reserveListingSlot(draftId: string): Promise<void> {
+  const call = httpsCallable<{ draftId: string }, { reserved: boolean }>(functions, "reserveListingSlot");
+  await call({ draftId });
+}
+
+/**
  * Creates a listing via the createListing Cloud Function rather than writing
  * to Firestore directly — that's where the active-listing limit and photo
  * count are actually enforced against the real current count.

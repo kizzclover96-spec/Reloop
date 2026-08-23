@@ -3,6 +3,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    match /likes/{likeId} {
+      // Doc id is always "{uid}_{listingId}" (enforced below), which makes
+      // "one like per user per listing" automatic — there's no separate
+      // document to query or dedupe, a second like attempt just overwrites
+      // the same doc. The actual on-screen count lives on the listing
+      // itself (listings/{id}.likeCount) and is only ever updated by the
+      // onLikeCreated/onLikeDeleted triggers (functions/likes.js) — never
+      // computed by counting these docs live, and never client-writable.
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.uid
+                    && likeId == request.auth.uid + '_' + request.resource.data.listingId;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
     match /listings/{listingId} {
       // Anyone can browse listings — it's a public marketplace.
       allow read: if true;
@@ -16,8 +32,13 @@ service cloud.firestore {
       // "sold" no longer happens here at all — that only ever happens via
       // claimGiveaway or the payment webhook (both Admin SDK), because a
       // client-writable status flip would mean a buyer could mark any paid
-      // listing sold without actually paying for it.
-      allow update: if request.auth != null && resource.data.sellerId == request.auth.uid;
+      // listing sold without actually paying for it. likeCount is excluded
+      // too, for the same reason — it must only ever come from the real
+      // like-count triggers (functions/likes.js), never a direct write, or
+      // a seller could just set it to any number on their own listing.
+      allow update: if request.auth != null
+                    && resource.data.sellerId == request.auth.uid
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['likeCount']);
 
       allow delete: if request.auth != null
                     && resource.data.sellerId == request.auth.uid;
@@ -77,6 +98,20 @@ service cloud.firestore {
       // cart (kept out of Stripe's metadata, which has a size limit a cart
       // could easily exceed). Only ever written and read by Cloud Functions'
       // Admin SDK; nothing here needs to be, or should be, client-visible.
+      allow read, write: if false;
+    }
+
+    match /listingDrafts/{draftId} {
+      // Exists purely so storage.rules can verify a reservation before
+      // allowing a photo upload (see reserveListingSlot in functions/index.js).
+      // Never read or written directly by a client — only ever touched via
+      // the Admin SDK, and read cross-service from Storage's own rules.
+      allow read, write: if false;
+    }
+
+    match /processedWebhookEvents/{eventId} {
+      // Dedup record for Stripe webhook deliveries (functions/stripeConnect.js)
+      // — Admin SDK only, nothing here is ever relevant to a client.
       allow read, write: if false;
     }
 

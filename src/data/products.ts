@@ -18,6 +18,8 @@ export interface ListingData {
   category: string;
   giveaway?: boolean;
   packageSize: "small" | "medium" | "large";
+  description?: string;
+  likeCount?: number;
 }
 
 export const SEED_LISTINGS: ListingData[] = [

@@ -106,63 +106,108 @@ exports.submitShipment = onCall({ secrets: [STRIPE_SECRET_KEY, AFTERSHIP_API_KEY
     throw new HttpsError("invalid-argument", "Missing shipment details.");
   }
 
-  let orders;
+  let orderRefs;
   if (cartGroupId) {
     const snap = await db.collection("orders").where("cartGroupId", "==", cartGroupId).get();
-    orders = snap.docs.map((d) => ({ ref: d.ref, data: d.data() }));
-    if (orders.length === 0) throw new HttpsError("not-found", "Order group not found.");
+    if (snap.empty) throw new HttpsError("not-found", "Order group not found.");
+    orderRefs = snap.docs.map((d) => d.ref);
   } else {
-    const ref = db.collection("orders").doc(orderId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
-    orders = [{ ref, data: snap.data() }];
+    orderRefs = [db.collection("orders").doc(orderId)];
   }
 
-  for (const { data } of orders) {
-    if (data.sellerId !== uid) throw new HttpsError("permission-denied", "Not your order.");
-    if (data.status !== "awaiting_shipment") throw new HttpsError("failed-precondition", "ALREADY_SHIPPED");
-  }
+  // Atomically claim every order in the group by moving it out of
+  // "awaiting_shipment" BEFORE doing anything slow (carrier verification,
+  // Stripe). This is what actually stops a double-tap, a client retry, or
+  // a genuine race with cancelOrder from both proceeding — only one
+  // transaction can win this read-check-write; Firestore guarantees that,
+  // it isn't just an optimistic hope. The previous version only checked
+  // status as a plain read at the very start and didn't write anything
+  // until after the Stripe transfer already happened, leaving the entire
+  // verify+transfer window wide open to a second concurrent call.
+  let ordersData;
+  await db.runTransaction(async (tx) => {
+    const snaps = await Promise.all(orderRefs.map((ref) => tx.get(ref)));
+    ordersData = snaps.map((s) => s.data());
 
-  const result = await verifyWithCarrier({ trackingNumber, orderId: cartGroupId || orderId });
-  if (!result.verified) {
-    throw new HttpsError("failed-precondition", "VERIFY_FAILED");
-  }
-
-  const totalSellerEarned = orders.reduce((sum, o) => sum + (o.data.sellerEarned || 0), 0);
-  let transferId = null;
-
-  if (totalSellerEarned > 0) {
-    const sellerSnap = await db.collection("users").doc(uid).get();
-    const sellerAccountId = sellerSnap.exists ? sellerSnap.data().stripeAccountId : null;
-    if (!sellerAccountId) throw new HttpsError("failed-precondition", "SELLER_NOT_READY");
-
-    const stripe = getStripe(STRIPE_SECRET_KEY.value());
-    const transfer = await stripe.transfers.create({
-      amount: Math.round(totalSellerEarned * 100),
-      currency: "eur",
-      destination: sellerAccountId,
-      transfer_group: cartGroupId || orderId,
-      metadata: cartGroupId ? { cartGroupId } : { orderId },
+    snaps.forEach((snap, i) => {
+      if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
+      const data = ordersData[i];
+      if (data.sellerId !== uid) throw new HttpsError("permission-denied", "Not your order.");
+      if (data.status !== "awaiting_shipment") throw new HttpsError("failed-precondition", "ALREADY_PROCESSED");
     });
-    transferId = transfer.id;
-  }
 
-  const batch = db.batch();
-  const now = Date.now();
-  for (const { ref } of orders) {
-    batch.update(ref, {
-      status: "completed",
-      completedAt: now,
-      carrier,
-      trackingNumber,
-      verifiedCarrierSlug: result.detectedCarrier || null, // what AfterShip actually detected, vs. the seller's dropdown pick
-      shipmentVerifiedAt: now,
-      ...(transferId ? { transferId } : {}),
+    for (const ref of orderRefs) {
+      tx.update(ref, { status: "shipment_processing" });
+    }
+  });
+
+  try {
+    const result = await verifyWithCarrier({ trackingNumber, orderId: cartGroupId || orderId });
+    if (!result.verified) {
+      throw new HttpsError("failed-precondition", "VERIFY_FAILED");
+    }
+
+    const totalSellerEarned = ordersData.reduce((sum, o) => sum + (o.sellerEarned || 0), 0);
+    let transferId = null;
+
+    if (totalSellerEarned > 0) {
+      const sellerSnap = await db.collection("users").doc(uid).get();
+      const sellerAccountId = sellerSnap.exists ? sellerSnap.data().stripeAccountId : null;
+      if (!sellerAccountId) throw new HttpsError("failed-precondition", "SELLER_NOT_READY");
+
+      const stripe = getStripe(STRIPE_SECRET_KEY.value());
+      // A deterministic key (not a random one) tied to the order/group ID —
+      // if this exact transfer is ever attempted twice for any reason
+      // (including the retry path in the catch block below, in the rare
+      // case the transfer itself succeeded but something after it failed),
+      // Stripe recognizes the repeat and returns the original transfer
+      // instead of creating a second one.
+      const transfer = await stripe.transfers.create(
+        {
+          amount: Math.round(totalSellerEarned * 100),
+          currency: "eur",
+          destination: sellerAccountId,
+          transfer_group: cartGroupId || orderId,
+          metadata: cartGroupId ? { cartGroupId } : { orderId },
+        },
+        { idempotencyKey: `transfer-${cartGroupId || orderId}` }
+      );
+      transferId = transfer.id;
+    }
+
+    const batch = db.batch();
+    const now = Date.now();
+    for (const ref of orderRefs) {
+      batch.update(ref, {
+        status: "completed",
+        completedAt: now,
+        carrier,
+        trackingNumber,
+        verifiedCarrierSlug: result.detectedCarrier || null,
+        shipmentVerifiedAt: now,
+        ...(transferId ? { transferId } : {}),
+      });
+    }
+    await batch.commit();
+
+    return { verified: true, itemCount: orderRefs.length };
+  } catch (err) {
+    // Something failed after the claim — verification, the seller not
+    // having payouts set up, or a genuine Stripe error. Release the claim
+    // so the seller isn't permanently stuck in limbo and can retry. This is
+    // safe even in the unlikely case the Stripe transfer itself actually
+    // succeeded right before a later step failed: the idempotency key above
+    // means a retry can't create a second transfer, it'll just pick up the
+    // same one.
+    const revertBatch = db.batch();
+    for (const ref of orderRefs) {
+      revertBatch.update(ref, { status: "awaiting_shipment" });
+    }
+    await revertBatch.commit().catch((revertErr) => {
+      console.error("Failed to revert shipment_processing claim after error:", revertErr.message);
     });
+    throw err;
   }
-  await batch.commit();
-
-  return { verified: true, itemCount: orders.length };
 });
 
 module.exports = { submitShipment: exports.submitShipment };

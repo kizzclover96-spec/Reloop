@@ -192,7 +192,7 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
           padding: "18px 18px 100px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
@@ -223,21 +223,6 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
               </div>
             </div>
           </div>
-          <button
-            style={{
-              border: `0.5px solid ${COLOR.line}`,
-              background: "none",
-              borderRadius: 20,
-              padding: "8px 14px",
-              fontFamily: SANS,
-              fontSize: 12,
-              fontWeight: 600,
-              color: COLOR.ink,
-              cursor: "pointer",
-            }}
-          >
-            {t("product.messageSeller")}
-          </button>
         </div>
 
         <div
@@ -264,6 +249,12 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
         <p style={{ fontFamily: SANS, fontSize: 12.5, color: COLOR.inkSoft, margin: "0 0 16px" }}>
           {product.size} &nbsp;·&nbsp; {product.location}
         </p>
+
+        {product.description && (
+          <p style={{ fontFamily: SANS, fontSize: 13, lineHeight: 1.65, color: COLOR.ink, margin: "0 0 20px", whiteSpace: "pre-wrap" }}>
+            {product.description}
+          </p>
+        )}
 
         <div style={{ borderTop: `0.5px solid ${COLOR.lineSoft}`, paddingTop: 14 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>

@@ -167,7 +167,7 @@ async function markOrderPaid(paymentIntent) {
   const buyerAddress = buyerSnap.exists ? buyerSnap.data().address : null;
 
   const listingRef = db.collection("listings").doc(listingId);
-  let shouldDeletePhotos = false;
+  let orderCreated = false;
   const now = Date.now();
 
   await db.runTransaction(async (tx) => {
@@ -177,7 +177,7 @@ async function markOrderPaid(paymentIntent) {
     if (listing.status !== "active") return; // already sold/claimed — don't double-process
 
     tx.delete(listingRef);
-    shouldDeletePhotos = true;
+    orderCreated = true;
     tx.set(db.collection("orders").doc(), {
       listingId,
       receiptCode: generateReceiptCode(),
@@ -219,7 +219,31 @@ async function markOrderPaid(paymentIntent) {
     });
   });
 
-  if (shouldDeletePhotos) {
+  // The transaction above is the actual race-condition fix: if two buyers'
+  // payments both confirm for the same listing at nearly the same instant,
+  // only one transaction can see status === "active" and win — Firestore's
+  // optimistic concurrency guarantees that, it isn't just a hopeful check.
+  // But the LOSING payment was still genuinely captured by Stripe. Without
+  // this branch, that buyer's money would simply vanish into Reloop's
+  // balance with no order and no way back — this refunds it immediately.
+  if (!orderCreated) {
+    const itemLabel = `${brand || ""} ${title || ""}`.trim() || "that item";
+    try {
+      const stripe = getStripe(STRIPE_SECRET_KEY.value());
+      await stripe.refunds.create({ payment_intent: paymentIntent.id });
+    } catch (err) {
+      console.error(`Failed to refund lost-race payment ${paymentIntent.id}:`, err.message);
+    }
+    await notifyUser(buyerId, {
+      type: "purchase_failed",
+      title: "Item no longer available",
+      body: `${itemLabel} was already sold to someone else. You've been refunded in full.`,
+      data: {},
+    });
+    return;
+  }
+
+  if (orderCreated) {
     try {
       const bucket = getStorage().bucket();
       await bucket.deleteFiles({ prefix: `listings/${sellerId}/${listingId}/` });

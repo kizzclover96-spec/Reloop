@@ -139,6 +139,20 @@ exports.stripeWebhook = onRequest(
       }
     }
 
+    // Explicit dedup on top of the idempotency the transactional order/cart
+    // logic already provides (a redelivered payment_intent.succeeded can't
+    // create a second order regardless, since markOrderPaid/markCartPaid
+    // check real Firestore state, not just "have I seen this before"). This
+    // is a cheap extra layer specifically against Stripe's documented retry
+    // behavior, and it makes the "was this exact event already handled"
+    // question explicit and auditable rather than implicit.
+    const eventRef = db.collection("processedWebhookEvents").doc(event.id);
+    if ((await eventRef.get()).exists) {
+      console.log(`Webhook event ${event.id} already processed — skipping.`);
+      res.status(200).send("ok");
+      return;
+    }
+
   if (event.type === "account.updated") {
     const account = event.data.object;
     const uid = account.metadata?.uid;
@@ -168,6 +182,12 @@ exports.stripeWebhook = onRequest(
     // failure directly from stripe.confirmPayment()'s return value. This is
     // just server-side visibility (e.g. for your own logs/monitoring).
   }
+
+  // Recorded only now, after successful processing — if anything above
+  // threw, this line never runs, so a genuine failure still allows Stripe's
+  // retry to legitimately reprocess the event rather than being skipped
+  // forever as "already handled."
+  await eventRef.set({ type: event.type, processedAt: FieldValue.serverTimestamp() });
 
   res.status(200).send("ok");
 });
