@@ -435,6 +435,10 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "Your name",
     "profile.save": "Save",
     "profile.errorNameEmpty": "Enter a name.",
+    "category.electronics": "Electronics",
+    "category.hardware": "Hardware",
+    "category.books": "Books",
+    "auth.continueApple": "Continue with Apple",
   },
 
   de: {
@@ -858,6 +862,10 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "Dein Name",
     "profile.save": "Speichern",
     "profile.errorNameEmpty": "Gib einen Namen ein.",
+    "category.electronics": "Elektronik",
+    "category.hardware": "Werkzeug",
+    "category.books": "Bücher",
+    "auth.continueApple": "Weiter mit Apple",
   },
 
   es: {
@@ -1281,6 +1289,10 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "Tu nombre",
     "profile.save": "Guardar",
     "profile.errorNameEmpty": "Introduce un nombre.",
+    "category.electronics": "Electrónica",
+    "category.hardware": "Herramientas",
+    "category.books": "Libros",
+    "auth.continueApple": "Continuar con Apple",
   },
 
   fr: {
@@ -1704,6 +1716,10 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "Votre nom",
     "profile.save": "Enregistrer",
     "profile.errorNameEmpty": "Entrez un nom.",
+    "category.electronics": "Électronique",
+    "category.hardware": "Outillage",
+    "category.books": "Livres",
+    "auth.continueApple": "Continuer avec Apple",
   },
   tr: {
     "nav.home": "Anasayfa",
@@ -2117,6 +2133,10 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "Adın",
     "profile.save": "Kaydet",
     "profile.errorNameEmpty": "Bir isim gir.",
+    "category.electronics": "Elektronik",
+    "category.hardware": "Hırdavat",
+    "category.books": "Kitaplar",
+    "auth.continueApple": "Apple ile devam et",
   },
   zh: {
     "nav.home": "首页",
@@ -2530,6 +2550,10 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "你的姓名",
     "profile.save": "保存",
     "profile.errorNameEmpty": "请输入姓名。",
+    "category.electronics": "电子产品",
+    "category.hardware": "五金工具",
+    "category.books": "图书",
+    "auth.continueApple": "使用 Apple 继续",
   },
   hi: {
     "nav.home": "होम",
@@ -2943,6 +2967,10 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "आपका नाम",
     "profile.save": "सेव करें",
     "profile.errorNameEmpty": "एक नाम दर्ज करें।",
+    "category.electronics": "इलेक्ट्रॉनिक्स",
+    "category.hardware": "हार्डवेयर",
+    "category.books": "किताबें",
+    "auth.continueApple": "Apple से जारी रखें",
   },
   sq: {
     "nav.home": "Kryefaqja",
@@ -3356,5 +3384,9 @@ export const translations: Record<LangCode, Dict> = {
     "profile.namePlaceholder": "Emri yt",
     "profile.save": "Ruaj",
     "profile.errorNameEmpty": "Vendos një emër.",
+    "category.electronics": "Elektronikë",
+    "category.hardware": "Mjete pune",
+    "category.books": "Libra",
+    "auth.continueApple": "Vazhdo me Apple",
   },
 };

@@ -512,6 +512,7 @@ function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, 
       <div style={{ padding: "18px 18px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
           <span style={{ fontFamily: SERIF, fontSize: 16, color: COLOR.ink }}>{t("home.watchlist")}</span>
+          <span style={{ fontFamily: SANS, fontSize: 12, color: COLOR.oxblood }}>{t("home.seeAll")}</span>
         </div>
         {listingsLoading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>

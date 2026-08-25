@@ -17,6 +17,15 @@ import {
   type AttemptState,
 } from "./utils/loginAttempts";
 
+/** Apple's actual logomark — lucide-react's "Apple" icon is a literal fruit, not this. */
+function AppleMark({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#fff">
+      <path d="M16.365 1.43c0 1.14-.42 2.09-1.26 2.86-.9.83-1.99 1.31-3.02 1.23-.12-1.12.44-2.24 1.25-2.99.87-.8 2.05-1.35 3.03-1.4.03.1.03.2.03.3zM20.6 17.24c-.55 1.27-.81 1.84-1.52 2.96-.99 1.56-2.38 3.5-4.11 3.51-1.53.02-1.93-.99-4.01-.98-2.08.01-2.52 1-4.05.98-1.73-.02-3.05-1.77-4.04-3.32C.16 16.9-.6 12.36 1.02 9.19c1.13-2.21 2.98-3.5 5.03-3.53 1.6-.03 2.98 1.05 3.9 1.05.9 0 2.6-1.3 4.4-1.11.75.03 2.87.3 4.23 2.28-.11.07-2.52 1.44-2.5 4.32.03 3.42 3.03 4.56 3.06 4.57-.02.08-.47 1.58-1.54 3.47z" />
+    </svg>
+  );
+}
+
 const ONBOARD_SLIDES = [
   { Icon: Repeat, titleKey: "onboard.slide1Title", bodyKey: "onboard.slide1Body" },
   { Icon: MapPin, titleKey: "onboard.slide2Title", bodyKey: "onboard.slide2Body" },
@@ -32,7 +41,7 @@ const POLICY_DOCS: { key: LegalDocKey; labelKey: string }[] = [
 ];
 
 export default function LoginScreen() {
-  const { signIn, signUp, signInWithGoogle, signInWithYahoo } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithYahoo, signInWithApple } = useAuth();
   const { t } = useLanguage();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -149,6 +158,19 @@ export default function LoginScreen() {
     try {
       await setRememberMe(remember);
       await signInWithYahoo();
+    } catch (err: any) {
+      setError(friendlyError(err?.code || ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const apple = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      await setRememberMe(remember);
+      await signInWithApple();
     } catch (err: any) {
       setError(friendlyError(err?.code || ""));
     } finally {
@@ -280,12 +302,44 @@ export default function LoginScreen() {
             <div style={{ flex: 1, height: 1, background: COLOR.lineSoft }} />
           </div>
 
+          {/* SIGN IN WITH APPLE — full-width, its own row, above Google/Yahoo.
+              Apple's App Store guideline 4.8 requires this be offered with
+              equal or greater prominence than other third-party sign-in
+              options, since Google/Yahoo are already offered — squeezing it
+              into a 3-up row with the others wouldn't satisfy that. */}
+          <button
+            type="button"
+            onClick={apple}
+            disabled={busy}
+            style={{
+              width: "100%",
+              height: 42,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              background: "#000",
+              color: "#fff",
+              border: "none",
+              borderRadius: 9,
+              fontFamily: SANS,
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: busy ? "default" : "pointer",
+              opacity: busy ? 0.45 : 1,
+              marginBottom: 8,
+            }}
+          >
+            <AppleMark size={15} />
+            {t("auth.continueApple")}
+          </button>
+
           {/* GOOGLE + YAHOO, SIDE BY SIDE */}
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={google} disabled={busy} style={secondaryButtonStyle(busy)}>
+            <button type="button" onClick={google} disabled={busy} style={secondaryButtonStyle(busy)}>
               {t("auth.continueGoogle")}
             </button>
-            <button onClick={yahoo} disabled={busy} style={secondaryButtonStyle(busy)}>
+            <button type="button" onClick={yahoo} disabled={busy} style={secondaryButtonStyle(busy)}>
               {t("auth.continueYahoo")}
             </button>
           </div>

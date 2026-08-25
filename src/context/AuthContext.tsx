@@ -22,6 +22,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithYahoo: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -122,6 +123,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
+   * Apple's flow needs one more thing than Google/Yahoo do: a nonce. Apple
+   * signs the identity token against a nonce value as a replay-protection
+   * measure, and Firebase's credential() call for apple.com won't validate
+   * without it — passing only idToken here (as Google/Yahoo do) fails
+   * silently or throws depending on SDK version. The plugin surfaces it as
+   * result.credential.nonce; Firebase's own API just calls the same value
+   * rawNonce — same thing, different name at each layer.
+   */
+  const signInWithApple = async () => {
+    if (Capacitor.isNativePlatform()) {
+      const result = await FirebaseAuthentication.signInWithApple();
+      const cred = result.credential;
+      if (!cred?.idToken) {
+        throw new Error("Apple sign-in didn't return a usable credential.");
+      }
+      const provider = new OAuthProvider("apple.com");
+      const credential = provider.credential({
+        idToken: cred.idToken,
+        rawNonce: cred.nonce,
+      });
+      await signInWithCredential(auth, credential);
+    } else {
+      await signInWithPopup(auth, new OAuthProvider("apple.com"));
+    }
+  };
+
+  /**
    * Updates the Auth-level displayName — the single source of truth for a
    * user's name in this app; there's no separate copy mirrored in
    * Firestore. New listings, orders, etc. pick up the new name from here
@@ -153,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithYahoo, updateDisplayName, logout }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithYahoo, signInWithApple, updateDisplayName, logout }}>
       {children}
     </AuthContext.Provider>
   );
