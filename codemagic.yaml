@@ -20,11 +20,12 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-        # Found in App Store Connect → your app → General → App Information
-        # → Apple ID, once you've created the app listing there. Leave
-        # blank until then — only needed for the auto-publish step at the
-        # bottom of this file.
-        APP_STORE_APP_ID: ""
+        # Once you've created the app listing in App Store Connect, its
+        # numeric App ID goes here (App Store Connect → your app → General
+        # → App Information → Apple ID) — add this var back in, along with
+        # the "Increment build number" script step further down, once
+        # you're actually at that stage. Leaving it out entirely for now,
+        # since an empty placeholder isn't valid here.
 
       node: 20.19.0
       xcode: 16.2
@@ -85,11 +86,6 @@ workflows:
         script: |
           xcode-project use-profiles
 
-      - name: Increment build number
-        script: |
-          cd $CM_BUILD_DIR/ios/App
-          agvtool new-version -all $(($(app-store-connect get-latest-app-store-build-number "$APP_STORE_APP_ID") + 1))
-
       - name: Build ipa
         script: |
           xcode-project build-ipa \
@@ -100,13 +96,13 @@ workflows:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
-    publishing:
-      # Uncomment once GoogleService-Info.plist, the URL scheme, and code
-      # signing are all actually working end to end — no point auto-pushing
-      # to TestFlight before a build has been confirmed to even launch.
-      # email:
-      #   recipients:
-      #     - you@example.com
-      # app_store_connect:
-      #   auth: integration
-      #   submit_to_testflight: true
+# No "publishing:" block yet — Codemagic doesn't allow that key to exist
+# with everything under it commented out (which is what caused the original
+# validation error). Add it back once GoogleService-Info.plist, the URL
+# scheme, and code signing are all confirmed working end to end — something
+# like:
+#
+#   publishing:
+#     app_store_connect:
+#       auth: integration
+#       submit_to_testflight: true
