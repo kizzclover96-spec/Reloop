@@ -22,6 +22,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithYahoo: () => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -120,6 +121,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  /**
+   * Updates the Auth-level displayName — the single source of truth for a
+   * user's name in this app; there's no separate copy mirrored in
+   * Firestore. New listings, orders, etc. pick up the new name from here
+   * automatically going forward; existing ones keep whatever name was
+   * denormalized onto them at the time (same pattern as shipping
+   * addresses on past orders — a snapshot, not a live reference, so past
+   * activity doesn't silently change after the fact).
+   *
+   * onAuthStateChanged doesn't re-fire just because updateProfile() was
+   * called — it mutates the existing User object in place — so the local
+   * `user` state needs a genuinely new object reference here, or React's
+   * setState will bail out (same reference in, same reference out) and the
+   * UI won't reflect the change until the next real auth event.
+   */
+  const updateDisplayName = async (name: string) => {
+    if (!auth.currentUser) throw new Error("Not signed in.");
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("Name can't be empty.");
+    await updateProfile(auth.currentUser, { displayName: trimmed });
+    await auth.currentUser.reload();
+    setUser(auth.currentUser ? ({ ...auth.currentUser } as User) : null);
+  };
+
   const logout = async () => {
     if (Capacitor.isNativePlatform()) {
       await FirebaseAuthentication.signOut();
@@ -128,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithYahoo, logout }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithYahoo, updateDisplayName, logout }}>
       {children}
     </AuthContext.Provider>
   );

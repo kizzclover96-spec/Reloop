@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronLeft, Bookmark, Share2, Star, ShieldCheck, CheckCircle2, Check, ShoppingCart } from "lucide-react";
+import { ChevronLeft, Bookmark, Share2, ShieldCheck, CheckCircle2, Check, ShoppingCart } from "lucide-react";
 import { COLOR, SERIF, SANS, cssBackground, cssBackgroundContain } from "./theme";
 import type { Listing } from "./data/listings";
 import { useLanguage } from "./i18n/LanguageContext";
@@ -214,12 +214,6 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
             <div>
               <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: COLOR.ink }}>
                 {product.seller.name}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <Star size={11} color={COLOR.gold} fill={COLOR.gold} />
-                <span style={{ fontFamily: SANS, fontSize: 11.5, color: COLOR.inkSoft }}>
-                  {product.seller.rating.toFixed(1)} ({product.seller.reviews})
-                </span>
               </div>
             </div>
           </div>

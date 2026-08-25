@@ -1,0 +1,8 @@
+# Firebase
+GoogleService-Info.plist
+
+# Secrets
+*.p12
+*.pem
+*.key
+service-account*.json

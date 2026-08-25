@@ -66,5 +66,28 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Reloop uses your camera so you can take a photo directly for a listing.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Reloop uses your photo library so you can choose a photo for a listing.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!--
+				  Google Sign-In's iOS OAuth callback needs this — the value
+				  is the REVERSED_CLIENT_ID field from GoogleService-Info.plist
+				  (once that file exists; it doesn't yet, same situation as
+				  google-services.json on Android — it can only come from
+				  registering the iOS app in Firebase Console). It looks like
+				  com.googleusercontent.apps.XXXXXXXXXXXX-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+				  — copy it verbatim from that file once you have it, replacing
+				  the placeholder below.
+				-->
+				<string>com.googleusercontent.apps.909293528446-j5ai1npeuq29jqtpka08tmnnqq5e67d1</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

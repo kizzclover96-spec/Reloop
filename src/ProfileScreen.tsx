@@ -23,6 +23,7 @@ import {
   Receipt,
   Package,
   RefreshCw,
+  Edit2,
 } from "lucide-react";
 import { COLOR, SERIF, SANS, cssBackground } from "./theme";
 import { useUserListings, deleteListing, type Listing } from "./data/listings";
@@ -38,6 +39,7 @@ import DataDisclosure from "./DataDisclosure";
 import HelpSupport from "./HelpSupport";
 import { useUserNotifications, markNotificationRead } from "./data/notifications";
 import { unregisterCurrentDeviceForPush } from "./data/push";
+import { sanitizeText } from "./utils/sanitize";
 import { Capacitor } from "@capacitor/core";
 import { Browser as CapacitorBrowser } from "@capacitor/browser";
 import LegalViewer from "./legal/LegalViewer";
@@ -479,7 +481,7 @@ export default function ProfileScreen({
   initialView?: string | null;
   onConsumeInitialView?: () => void;
 }) {
-  const { logout } = useAuth();
+  const { logout, updateDisplayName } = useAuth();
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState<string | null>("selling");
   const [showTransactions, setShowTransactions] = useState(false);
@@ -495,6 +497,10 @@ export default function ProfileScreen({
   const [selectedReceipt, setSelectedReceipt] = useState<{ order: Order; role: "buyer" | "seller" } | null>(null);
   const [showDisclosure, setShowDisclosure] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showEditName, setShowEditName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [nameSaving, setNameSaving] = useState(false);
   const [showPrivacyDoc, setShowPrivacyDoc] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
@@ -750,6 +756,23 @@ export default function ProfileScreen({
 
   const displayName = user?.displayName || user?.email?.split("@")[0] || "You";
 
+  const handleSaveName = async () => {
+    if (!nameInput.trim()) {
+      setNameError(t("profile.errorNameEmpty"));
+      return;
+    }
+    setNameError("");
+    setNameSaving(true);
+    try {
+      await updateDisplayName(sanitizeText(nameInput, 60));
+      setShowEditName(false);
+    } catch (err: any) {
+      setNameError(err?.message || t("profile.errorNameEmpty"));
+    } finally {
+      setNameSaving(false);
+    }
+  };
+
   if (showReceipts) {
     const receiptOrders = [
       ...asBuyer.filter((o) => o.status !== "cancelled").map((o) => ({ order: o, role: "buyer" as const })),
@@ -890,7 +913,17 @@ export default function ProfileScreen({
             {displayName.slice(0, 1).toUpperCase()}
           </div>
           <div>
-            <p style={{ fontFamily: SERIF, fontSize: 19, color: COLOR.ink, margin: 0 }}>{displayName}</p>
+            <button
+              onClick={() => {
+                setNameInput(displayName);
+                setNameError("");
+                setShowEditName(true);
+              }}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+            >
+              <p style={{ fontFamily: SERIF, fontSize: 19, color: COLOR.ink, margin: 0 }}>{displayName}</p>
+              <Edit2 size={12} color={COLOR.inkSoft} />
+            </button>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
               <span style={{ fontFamily: SANS, fontSize: 12, color: COLOR.inkSoft }}>{t("profile.itemsSold", { count: asSeller.filter((o) => o.status === "completed").length })}</span>
               <span style={{ width: 3, height: 3, borderRadius: "50%", background: COLOR.inkSoft }} />
@@ -1303,6 +1336,74 @@ export default function ProfileScreen({
           <LogOut size={14} /> {t("profile.logOut")}
         </button>
       </div>
+
+      {showEditName && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(20,18,15,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 90,
+            padding: 24,
+          }}
+          onClick={() => !nameSaving && setShowEditName(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 320, background: COLOR.card, borderRadius: 16, padding: 22, boxSizing: "border-box" }}
+          >
+            <p style={{ fontFamily: SERIF, fontSize: 17, color: COLOR.ink, margin: "0 0 6px" }}>{t("profile.editNameTitle")}</p>
+            <p style={{ fontFamily: SANS, fontSize: 11.5, color: COLOR.inkSoft, lineHeight: 1.5, margin: "0 0 16px" }}>
+              {t("profile.editNameBody")}
+            </p>
+            <input
+              autoFocus
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder={t("profile.namePlaceholder")}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+              style={{
+                width: "100%",
+                height: 42,
+                boxSizing: "border-box",
+                border: `0.5px solid ${COLOR.line}`,
+                borderRadius: 10,
+                padding: "0 14px",
+                outline: "none",
+                fontFamily: SANS,
+                fontSize: 14,
+                color: COLOR.ink,
+                marginBottom: nameError ? 8 : 16,
+              }}
+            />
+            {nameError && (
+              <p style={{ fontFamily: SANS, fontSize: 11.5, color: "#B23A3A", margin: "0 0 14px" }}>{nameError}</p>
+            )}
+            <button
+              onClick={handleSaveName}
+              disabled={nameSaving}
+              style={{
+                width: "100%",
+                background: COLOR.ink,
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "12px",
+                fontFamily: SANS,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: nameSaving ? "default" : "pointer",
+                opacity: nameSaving ? 0.6 : 1,
+              }}
+            >
+              {t("profile.save")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

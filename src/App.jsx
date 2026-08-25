@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Camera,
   Sparkles,
-  SlidersHorizontal,
   X,
   Check,
   Bell,
@@ -513,7 +512,6 @@ function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, 
       <div style={{ padding: "18px 18px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
           <span style={{ fontFamily: SERIF, fontSize: 16, color: COLOR.ink }}>{t("home.watchlist")}</span>
-          <span style={{ fontFamily: SANS, fontSize: 12, color: COLOR.oxblood }}>{t("home.seeAll")}</span>
         </div>
         {listingsLoading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
@@ -557,12 +555,10 @@ function HomeScreen({ listings, listingsLoading, favourites, toggleFav, goShop, 
 --------------------------------------------------------------- */
 function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFilter, setCategoryFilter, searchKeyword, setSearchKeyword, goList, favourites, toggleFav }) {
   const { t } = useLanguage();
-  const [filterOpen, setFilterOpen] = useState(false);
   const [keywordInput, setKeywordInput] = useState(searchKeyword || "");
 
   useEffect(() => {
     setKeywordInput(searchKeyword || "");
-    if (searchKeyword) setFilterOpen(true);
   }, [searchKeyword]);
 
   const categoryLabel = (name) => {
@@ -641,7 +637,7 @@ function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFi
         </div>
       )}
 
-      {filterOpen && listings.length > 0 && (
+      {listings.length > 0 && (
         <form onSubmit={applyKeyword} style={{ padding: "0 18px 14px", display: "flex", gap: 8 }}>
           <div
             style={{
@@ -660,7 +656,6 @@ function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFi
               onChange={(e) => setKeywordInput(e.target.value)}
               placeholder={t("discover.searchPlaceholder")}
               style={{ flex: 1, background: "none", border: "none", outline: "none", fontFamily: SANS, fontSize: 12.5, color: COLOR.ink }}
-              autoFocus
             />
             {keywordInput && (
               <button
@@ -763,41 +758,6 @@ function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFi
             </div>
           )}
         </>
-      )}
-
-      {listings.length > 0 && (
-        <div
-          style={{
-            position: "sticky",
-            bottom: 14,
-            display: "flex",
-            justifyContent: "center",
-            pointerEvents: "none",
-          }}
-        >
-          <button
-            onClick={() => setFilterOpen((v) => !v)}
-            style={{
-              pointerEvents: "auto",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: COLOR.ink,
-              color: "#fff",
-              border: "none",
-              borderRadius: 24,
-              padding: "11px 20px",
-              fontFamily: SANS,
-              fontSize: 12.5,
-              fontWeight: 600,
-              letterSpacing: "0.02em",
-              cursor: "pointer",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
-            }}
-          >
-            <SlidersHorizontal size={13} /> {t("discover.filter")}
-          </button>
-        </div>
       )}
     </div>
   );
