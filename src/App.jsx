@@ -1765,7 +1765,7 @@ const TABS = [
  * screens — a settings page or a product form isn't more usable at 1800px
  * wide, just harder to scan.
  */
-function DesktopShell({ active, setActive, children, cartOverlay, notificationsOverlay, pushPrimerOverlay, isAdmin, onOpenAdmin }) {
+function DesktopShell({ active, setActive, children, cartOverlay, notificationsOverlay, pushPrimerOverlay }) {
   const { t } = useLanguage();
   const isGridScreen = active === "home" || active === "shop";
 
@@ -1840,26 +1840,6 @@ function DesktopShell({ active, setActive, children, cartOverlay, notificationsO
           {t("nav.list")}
         </button>
 
-        {isAdmin && (
-          <button
-            onClick={onOpenAdmin}
-            style={{
-              width: "100%",
-              background: "none",
-              border: `0.5px solid ${COLOR.line}`,
-              borderRadius: 10,
-              padding: "10px",
-              fontFamily: SANS,
-              fontSize: 12,
-              fontWeight: 600,
-              color: COLOR.inkSoft,
-              cursor: "pointer",
-              marginTop: 8,
-            }}
-          >
-            Admin Center
-          </button>
-        )}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
@@ -1917,7 +1897,7 @@ function BottomNav({ active, setActive, className }) {
 }
 
 export default function App() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const { t } = useLanguage();
   const { listings, loading: listingsLoading } = useListings();
   const [active, setActive] = useState("home");
@@ -1929,8 +1909,14 @@ export default function App() {
   const [showCart, setShowCart] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
-  const { isAdmin } = useIsAdmin();
-  const [showAdminCenter, setShowAdminCenter] = useState(false);
+  const { isAdmin, loading: adminCheckLoading } = useIsAdmin();
+  // Matches the same constant in functions/admin.js — but unlike that one,
+  // this copy has no security weight at all. It only decides whether the
+  // app *attempts* to show AdminCenter before the claim exists yet (i.e.
+  // this account's very first login, before bootstrapping); every real
+  // admin action re-verifies request.auth.token.admin server-side
+  // regardless of what this check decides.
+  const ROOT_ADMIN_EMAIL_FOR_ROUTING = "kizzclover96@gmail.com";
   const [showWelcome, setShowWelcome] = useState(() => {
     if (Capacitor.isNativePlatform()) return false;
     try {
@@ -2239,6 +2225,32 @@ export default function App() {
     </div>
   );
 
+  // Takes priority over everything else once someone's actually signed in —
+  // no welcome screen, no normal app, straight to the Admin Center. Checked
+  // here (before showWelcome/mobile/desktop branch at all) rather than as a
+  // button anywhere, since there's deliberately no visible admin entry
+  // point in the normal app for this to be reachable from.
+  if (user && (isAdmin || user.email === ROOT_ADMIN_EMAIL_FOR_ROUTING)) {
+    if (adminCheckLoading) {
+      // Avoid a flash of the ordinary consumer app while the async claim
+      // check is still resolving — better a brief blank beat than
+      // incorrectly showing (even momentarily) the screen this account
+      // should never actually land on.
+      return (
+        <>
+          {FONT_LINK}
+          <div style={{ minHeight: "100vh", background: COLOR.bg }} />
+        </>
+      );
+    }
+    return (
+      <>
+        {FONT_LINK}
+        <AdminCenter onLogout={logout} />
+      </>
+    );
+  }
+
   if (showWelcome && isMobile) {
     const dismissWelcome = () => {
       try {
@@ -2313,12 +2325,9 @@ export default function App() {
         cartOverlay={cartOverlay}
         notificationsOverlay={notificationsOverlay}
         pushPrimerOverlay={pushPrimerOverlay}
-        isAdmin={isAdmin}
-        onOpenAdmin={() => setShowAdminCenter(true)}
       >
         {screen}
       </DesktopShell>
-      {showAdminCenter && <AdminCenter onClose={() => setShowAdminCenter(false)} />}
     </>
   );
 }

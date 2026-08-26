@@ -18,7 +18,7 @@ import {
 } from "./data/admin";
 
 interface AdminCenterProps {
-  onClose: () => void;
+  onLogout: () => void;
 }
 
 const TABS = ["Dashboard", "Users", "Listings", "Audit Log"] as const;
@@ -98,7 +98,7 @@ const btnPrimary: React.CSSProperties = {
 
 const btnDanger: React.CSSProperties = { ...btnPrimary, background: "#B23A3A" };
 
-export default function AdminCenter({ onClose }: AdminCenterProps) {
+export default function AdminCenter({ onLogout }: AdminCenterProps) {
   const [tab, setTab] = useState<Tab>("Dashboard");
   const [stats, setStats] = useState<any>(null);
   const [error, setError] = useState("");
@@ -241,8 +241,8 @@ export default function AdminCenter({ onClose }: AdminCenterProps) {
           <button onClick={handleBootstrap} style={btnPrimary}>
             Bootstrap admin access
           </button>
-          <button onClick={onClose} style={{ ...btnPrimary, background: "none", color: COLOR.inkSoft, marginTop: 10 }}>
-            Close
+          <button onClick={onLogout} style={{ ...btnPrimary, background: "none", color: COLOR.inkSoft, marginTop: 10 }}>
+            Log out
           </button>
         </div>
       </div>
@@ -280,8 +280,8 @@ export default function AdminCenter({ onClose }: AdminCenterProps) {
           <button onClick={() => setInviteModal(true)} style={{ background: "none", border: `0.5px solid ${COLOR.line}`, borderRadius: 8, padding: "7px 14px", fontFamily: SANS, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
             Invite admin
           </button>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", display: "flex" }}>
-            <X size={20} color={COLOR.inkSoft} />
+          <button onClick={onLogout} style={{ background: "none", border: `0.5px solid ${COLOR.line}`, borderRadius: 8, padding: "7px 14px", fontFamily: SANS, fontSize: 12.5, fontWeight: 600, color: COLOR.inkSoft, cursor: "pointer" }}>
+            Log out
           </button>
         </div>
       </div>
