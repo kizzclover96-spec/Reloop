@@ -48,6 +48,7 @@ import ProfileScreen from "./ProfileScreen";
 import Notifications from "./Notifications";
 import Tutorial from "./Tutorial";
 import Welcome from "./Welcome";
+import DesktopWelcome from "./DesktopWelcome";
 import { useUserNotifications } from "./data/notifications";
 import { useUserLikes, toggleLike } from "./data/likes";
 import LoginScreen from "./LoginScreen";
@@ -745,7 +746,7 @@ function DiscoverScreen({ listings, onSelectProduct, onSeed, seeding, categoryFi
               </button>
             </div>
           ) : (
-            <div style={{ padding: "0 12px 100px", columnCount: 2, columnGap: 8 }}>
+            <div style={{ padding: "0 12px 100px", columnWidth: 168, columnGap: 12 }}>
               {filtered.map((p) => (
                 <div
                   key={p.id}
@@ -1745,6 +1746,111 @@ const TABS = [
   { key: "profile", labelKey: "nav.profile", Icon: ProfileTabIcon },
 ];
 
+/**
+ * The desktop equivalent of BottomNav + the mobile screen container. Only
+ * ever rendered on the web when the viewport is wide — never inside the
+ * bundled native app (see the isNative check where this is used), and never
+ * on a narrow browser window either, where the app should look identical to
+ * the native mobile experience rather than a cramped, tiny desktop layout.
+ *
+ * Grid-based screens (Home, Discover) get the full available width — their
+ * own internal grids (see the columnWidth-based masonry in DiscoverScreen)
+ * already adapt continuously to whatever space they're given. Detail and
+ * form-heavy screens (Profile, List, Favourites) are constrained to a
+ * comfortable reading width instead of stretching edge-to-edge, which is
+ * standard practice for this kind of content even on very wide desktop
+ * screens — a settings page or a product form isn't more usable at 1800px
+ * wide, just harder to scan.
+ */
+function DesktopShell({ active, setActive, children, cartOverlay, notificationsOverlay, pushPrimerOverlay }) {
+  const { t } = useLanguage();
+  const isGridScreen = active === "home" || active === "shop";
+
+  return (
+    <div style={{ height: "100vh", width: "100vw", display: "flex", background: COLOR.bg, overflow: "hidden" }}>
+      <div
+        style={{
+          width: 252,
+          flexShrink: 0,
+          borderRight: `0.5px solid ${COLOR.lineSoft}`,
+          display: "flex",
+          flexDirection: "column",
+          padding: "26px 16px 20px",
+          boxSizing: "border-box",
+        }}
+      >
+        <p style={{ fontFamily: SERIF, fontSize: 23, letterSpacing: "-0.3px", color: COLOR.ink, margin: "0 0 30px", paddingLeft: 10 }}>
+          Reloop
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+          {TABS.filter((tab) => tab.key !== "list").map((tab) => {
+            const isActive = active === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActive(tab.key)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "11px 10px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: isActive ? COLOR.oxbloodSoft : "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  width: "100%",
+                }}
+              >
+                <tab.Icon active={isActive} size={19} />
+                <span
+                  style={{
+                    fontFamily: SANS,
+                    fontSize: 13.5,
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? COLOR.oxblood : COLOR.ink,
+                  }}
+                >
+                  {t(tab.labelKey)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => setActive("list")}
+          style={{
+            width: "100%",
+            background: COLOR.ink,
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "13px",
+            fontFamily: SANS,
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {t("nav.list")}
+        </button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <div style={{ maxWidth: isGridScreen ? "100%" : 720, margin: isGridScreen ? 0 : "0 auto", padding: isGridScreen ? 0 : "36px 28px" }}>
+          {children}
+        </div>
+      </div>
+
+      {cartOverlay}
+      {notificationsOverlay}
+      {pushPrimerOverlay}
+    </div>
+  );
+}
+
 function BottomNav({ active, setActive, className }) {
   const { t } = useLanguage();
   return (
@@ -1819,6 +1925,14 @@ export default function App() {
       return false;
     }
   });
+  // Desktop's welcome screen isn't a one-time thing like mobile's — it's the
+  // logged-out landing state. Tapping "Sign up" reveals the real login form;
+  // logging out later needs to land back on the welcome screen, not a stuck
+  // login form, hence the reset effect right below.
+  const [desktopShowLogin, setDesktopShowLogin] = useState(false);
+  useEffect(() => {
+    if (!user) setDesktopShowLogin(false);
+  }, [user]);
   const [pushPrimer, setPushPrimer] = useState(false);
   const [notificationTarget, setNotificationTarget] = useState(null);
   const { unreadCount: unreadNotifications } = useUserNotifications(user?.uid);
@@ -2044,6 +2158,24 @@ export default function App() {
     </>
   );
 
+  // Same underlying states as `body` above, but without BottomNav baked in —
+  // on desktop, DesktopShell's sidebar replaces it entirely. Resolves to
+  // null once the user is past loading/login/address-setup/tutorial, which
+  // signals "show the real sidebar+content shell" further down.
+  const desktopPreShellBody = authLoading ? (
+    <div style={{ flex: 1, background: COLOR.bg }} />
+  ) : user && addressLoading ? (
+    <div style={{ flex: 1, overflowY: "auto" }}>
+      <HomeSkeleton />
+    </div>
+  ) : !user ? (
+    desktopShowLogin ? <LoginScreen /> : <DesktopWelcome onSignUp={() => setDesktopShowLogin(true)} />
+  ) : !address?.verified ? (
+    <AddressSetup onSaved={() => setShowTutorial(true)} />
+  ) : showTutorial ? (
+    <Tutorial onDone={() => setShowTutorial(false)} />
+  ) : null;
+
   const cartBuyer = user ? { uid: user.uid, name: user.displayName || user.email?.split("@")[0] || "You" } : null;
   const cartOverlay = showCart && <Cart listings={listings} buyer={cartBuyer} onClose={() => setShowCart(false)} />;
   const notificationsOverlay = showNotifications && user && (
@@ -2093,23 +2225,29 @@ export default function App() {
     </div>
   );
 
-  if (showWelcome) {
+  if (showWelcome && isMobile) {
+    const dismissWelcome = () => {
+      try {
+        localStorage.setItem("reloopWelcomeSeen", "1");
+      } catch {}
+      setShowWelcome(false);
+    };
     return (
       <>
         {FONT_LINK}
-        <Welcome
-          onContinue={() => {
-            try {
-              localStorage.setItem("reloopWelcomeSeen", "1");
-            } catch {}
-            setShowWelcome(false);
-          }}
-        />
+        <Welcome onContinue={dismissWelcome} />
       </>
     );
   }
 
-  if (isMobile) {
+  // The bundled native app is always mobile, full stop, regardless of the
+  // physical device's screen size (e.g. an iPad running the native app
+  // still gets the mobile layout — it's a mobile app). Only the website
+  // is actually responsive: a narrow browser window looks identical to the
+  // native mobile experience, a wide one gets the desktop shell below.
+  const showMobileLayout = Capacitor.isNativePlatform() || isMobile;
+
+  if (showMobileLayout) {
     return (
       <div
         style={{
@@ -2133,42 +2271,37 @@ export default function App() {
     );
   }
 
-  return (
-    <div style={{ minHeight: "100vh", background: "#EDEAE2", display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 12px" }}>
-      {FONT_LINK}
+  if (desktopPreShellBody) {
+    return (
       <div
         style={{
-          width: 375,
-          height: 780,
+          height: "100vh",
+          width: "100vw",
           background: COLOR.bg,
-          borderRadius: 44,
-          border: "10px solid #171614",
-          boxShadow: "0 30px 60px rgba(0,0,0,0.25)",
-          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          position: "relative",
+          overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 120,
-            height: 22,
-            background: "#171614",
-            borderRadius: 12,
-            zIndex: 10,
-          }}
-        />
-        <div style={{ height: 40, flexShrink: 0 }} />
-        {body}
-        {cartOverlay}
-        {notificationsOverlay}
-        {pushPrimerOverlay}
+        {FONT_LINK}
+        {desktopPreShellBody}
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <>
+      {FONT_LINK}
+      <DesktopShell
+        active={active}
+        setActive={changeTab}
+        cartOverlay={cartOverlay}
+        notificationsOverlay={notificationsOverlay}
+        pushPrimerOverlay={pushPrimerOverlay}
+      >
+        {screen}
+      </DesktopShell>
+    </>
   );
 }
