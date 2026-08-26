@@ -101,6 +101,29 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /admins/{adminUid} {
+      // Who's currently an admin, and what they're permitted to do — set only
+      // via adminInviteAdmin/bootstrapRootAdmin (Admin SDK). Readable by any
+      // admin (so the Admin Center UI can list current admins), but the
+      // actual ENFORCEMENT of admin access everywhere else in this file uses
+      // the Firebase custom claim (request.auth.token.admin), not a read of
+      // this collection — a claim can't be spoofed by a malicious Firestore
+      // write the way a plain "isAdmin" field could be if this collection
+      // were ever accidentally made writable.
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
+    match /adminAuditLog/{logId} {
+      // Every admin action is recorded here (functions/admin.js) — readable
+      // by admins for the Audit Log screen, but never writable by anyone
+      // through this path, including admins themselves. If it could be
+      // edited through the normal UI it wouldn't be a trustworthy audit
+      // trail.
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
     match /listingDrafts/{draftId} {
       // Exists purely so storage.rules can verify a reservation before
       // allowing a photo upload (see reserveListingSlot in functions/index.js).

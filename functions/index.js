@@ -461,3 +461,21 @@ exports.onUserCreated = pushTokens.onUserCreated;
 const likes = require("./likes");
 exports.onLikeCreated = likes.onLikeCreated;
 exports.onLikeDeleted = likes.onLikeDeleted;
+
+// Admin Center — see admin.js for the full security model (custom-claim
+// based, never a client-side email check) and every admin action.
+const admin = require("./admin");
+exports.bootstrapRootAdmin = admin.bootstrapRootAdmin;
+exports.adminInviteAdmin = admin.adminInviteAdmin;
+exports.adminRevokeAdmin = admin.adminRevokeAdmin;
+exports.adminGetDashboardStats = admin.adminGetDashboardStats;
+exports.adminSearchUsers = admin.adminSearchUsers;
+exports.adminGetUserDetail = admin.adminGetUserDetail;
+exports.adminSuspendUser = admin.adminSuspendUser;
+exports.adminBanUser = admin.adminBanUser;
+exports.adminRestoreUser = admin.adminRestoreUser;
+exports.adminDeleteUser = admin.adminDeleteUser;
+exports.adminEditUser = admin.adminEditUser;
+exports.adminSearchListings = admin.adminSearchListings;
+exports.adminRemoveListing = admin.adminRemoveListing;
+exports.adminGetAuditLog = admin.adminGetAuditLog;

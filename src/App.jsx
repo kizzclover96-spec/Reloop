@@ -49,6 +49,8 @@ import Notifications from "./Notifications";
 import Tutorial from "./Tutorial";
 import Welcome from "./Welcome";
 import DesktopWelcome from "./DesktopWelcome";
+import AdminCenter from "./AdminCenter";
+import { useIsAdmin } from "./data/admin";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useUserNotifications } from "./data/notifications";
 import { useUserLikes, toggleLike } from "./data/likes";
@@ -1763,7 +1765,7 @@ const TABS = [
  * screens — a settings page or a product form isn't more usable at 1800px
  * wide, just harder to scan.
  */
-function DesktopShell({ active, setActive, children, cartOverlay, notificationsOverlay, pushPrimerOverlay }) {
+function DesktopShell({ active, setActive, children, cartOverlay, notificationsOverlay, pushPrimerOverlay, isAdmin, onOpenAdmin }) {
   const { t } = useLanguage();
   const isGridScreen = active === "home" || active === "shop";
 
@@ -1837,6 +1839,27 @@ function DesktopShell({ active, setActive, children, cartOverlay, notificationsO
         >
           {t("nav.list")}
         </button>
+
+        {isAdmin && (
+          <button
+            onClick={onOpenAdmin}
+            style={{
+              width: "100%",
+              background: "none",
+              border: `0.5px solid ${COLOR.line}`,
+              borderRadius: 10,
+              padding: "10px",
+              fontFamily: SANS,
+              fontSize: 12,
+              fontWeight: 600,
+              color: COLOR.inkSoft,
+              cursor: "pointer",
+              marginTop: 8,
+            }}
+          >
+            Admin Center
+          </button>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
@@ -1906,6 +1929,8 @@ export default function App() {
   const [showCart, setShowCart] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const { isAdmin } = useIsAdmin();
+  const [showAdminCenter, setShowAdminCenter] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => {
     if (Capacitor.isNativePlatform()) return false;
     try {
@@ -2288,9 +2313,12 @@ export default function App() {
         cartOverlay={cartOverlay}
         notificationsOverlay={notificationsOverlay}
         pushPrimerOverlay={pushPrimerOverlay}
+        isAdmin={isAdmin}
+        onOpenAdmin={() => setShowAdminCenter(true)}
       >
         {screen}
       </DesktopShell>
+      {showAdminCenter && <AdminCenter onClose={() => setShowAdminCenter(false)} />}
     </>
   );
 }
