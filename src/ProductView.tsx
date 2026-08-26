@@ -117,7 +117,7 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
       style={
         isMobile
           ? { minHeight: "100%", background: COLOR.bg }
-          : { minHeight: "100%", background: COLOR.bg, display: "flex", flexDirection: "row-reverse", gap: 40, padding: "32px 40px 60px", boxSizing: "border-box", alignItems: "flex-start" }
+          : { minHeight: "100%", background: COLOR.bg, display: "flex", flexDirection: "row", gap: 40, padding: "32px 40px 60px", boxSizing: "border-box", alignItems: "flex-start" }
       }
     >
       <div
@@ -218,7 +218,7 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
                 flex: 1,
                 minWidth: 0,
                 maxWidth: 620,
-                padding: 0,
+                padding: "0 0 100px",
               }
         }
       >
@@ -409,17 +409,31 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
       )}
 
       <div
-        style={{
-          position: "sticky",
-          bottom: 0,
-          background: COLOR.card,
-          borderTop: `0.5px solid ${COLOR.line}`,
-          padding: "14px 18px 20px",
-          display: "flex",
-          justifyContent: "center",
-        }}
+        style={
+          isMobile
+            ? {
+                position: "sticky",
+                bottom: 0,
+                background: COLOR.card,
+                borderTop: `0.5px solid ${COLOR.line}`,
+                padding: "14px 18px 20px",
+                display: "flex",
+                justifyContent: "center",
+              }
+            : {
+                position: "fixed",
+                left: 540,
+                right: 40,
+                bottom: 0,
+                background: COLOR.card,
+                borderTop: `0.5px solid ${COLOR.line}`,
+                padding: "16px 0 24px",
+                display: "flex",
+                justifyContent: "flex-start",
+              }
+        }
       >
-        <div style={{ width: "100%", maxWidth: 320, display: "flex", gap: 10 }}>
+        <div style={{ width: "100%", maxWidth: isMobile ? 320 : "100%", display: "flex", gap: 10 }}>
           {!sold && !isOwnListing && (
             <button
               onClick={handleAddToCart}
