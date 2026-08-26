@@ -7,6 +7,7 @@ import { buyerPrice } from "./utils/price";
 import { shippingCostFor } from "./utils/shipping";
 import { useCart } from "./context/CartContext";
 import Checkout from "./Checkout";
+import { useIsMobile } from "./hooks/useIsMobile";
 
 export interface ProductViewProps {
   product: Listing;
@@ -53,6 +54,7 @@ function RoundButton({
 
 export default function ProductView({ product, listings = [], onSelectProduct, isSaved, onToggleSave, onBack, buyer }: ProductViewProps) {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const [imgIndex, setImgIndex] = useState(0);
   const [error, setError] = useState("");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -111,14 +113,32 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
   };
 
   return (
-    <div style={{ minHeight: "100%", background: COLOR.bg }}>
+    <div
+      style={
+        isMobile
+          ? { minHeight: "100%", background: COLOR.bg }
+          : { minHeight: "100%", background: COLOR.bg, display: "flex", flexDirection: "row-reverse", gap: 40, padding: "32px 40px 60px", boxSizing: "border-box", alignItems: "flex-start" }
+      }
+    >
       <div
-        style={{
-          position: "relative",
-          height: 320,
-          background: cssBackgroundContain(product.images[imgIndex]),
-          cursor: product.images.length > 1 ? "pointer" : "default",
-        }}
+        style={
+          isMobile
+            ? {
+                position: "relative",
+                height: 320,
+                background: cssBackgroundContain(product.images[imgIndex]),
+                cursor: product.images.length > 1 ? "pointer" : "default",
+              }
+            : {
+                position: "relative",
+                width: 460,
+                flexShrink: 0,
+                aspectRatio: product.ratio || "1 / 1",
+                background: cssBackgroundContain(product.images[imgIndex]),
+                borderRadius: 18,
+                cursor: product.images.length > 1 ? "pointer" : "default",
+              }
+        }
         onClick={() => setImgIndex((i) => (i + 1) % product.images.length)}
       >
         <div style={{ position: "absolute", top: 14, left: 14 }}>
@@ -184,13 +204,23 @@ export default function ProductView({ product, listings = [], onSelectProduct, i
       </div>
 
       <div
-        style={{
-          background: COLOR.card,
-          borderRadius: "18px 18px 0 0",
-          marginTop: -18,
-          position: "relative",
-          padding: "18px 18px 100px",
-        }}
+        style={
+          isMobile
+            ? {
+                background: COLOR.card,
+                borderRadius: "18px 18px 0 0",
+                marginTop: -18,
+                position: "relative",
+                padding: "18px 18px 100px",
+              }
+            : {
+                background: COLOR.card,
+                flex: 1,
+                minWidth: 0,
+                maxWidth: 620,
+                padding: 0,
+              }
+        }
       >
         <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

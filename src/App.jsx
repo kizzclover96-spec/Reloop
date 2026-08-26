@@ -49,6 +49,7 @@ import Notifications from "./Notifications";
 import Tutorial from "./Tutorial";
 import Welcome from "./Welcome";
 import DesktopWelcome from "./DesktopWelcome";
+import { useIsMobile } from "./hooks/useIsMobile";
 import { useUserNotifications } from "./data/notifications";
 import { useUserLikes, toggleLike } from "./data/likes";
 import LoginScreen from "./LoginScreen";
@@ -1890,18 +1891,6 @@ function BottomNav({ active, setActive, className }) {
       })}
     </div>
   );
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" ? window.innerWidth <= 520 : false
-  );
-  React.useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 520);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  return isMobile;
 }
 
 export default function App() {
