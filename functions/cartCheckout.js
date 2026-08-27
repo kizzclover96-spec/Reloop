@@ -239,6 +239,7 @@ async function markCartPaid(paymentIntent) {
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         status: "awaiting_shipment",
+        livemode: paymentIntent.livemode,
         createdAt: now,
         shipByAt: computeShipDeadline(now),
         completedAt: null,

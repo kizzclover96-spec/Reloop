@@ -144,62 +144,99 @@ exports.adminRevokeAdmin = onCall(async (request) => {
   return { revoked: true };
 });
 
-/** Dashboard overview — every number here comes from a live Firestore read, never a hardcoded value. */
+/** Dashboard overview — every number here comes from a live read, never a hardcoded value. */
 exports.adminGetDashboardStats = onCall(async (request) => {
   requireAdmin(request);
 
   const [
     activeListingsSnap,
     completedOrdersSnap,
-    recentUsersSnap,
     recentListingsSnap,
-    recentSalesSnap,
+    recentSalesRawSnap,
+    cancelledOrdersRawSnap,
+    awaitingOrdersRawSnap,
   ] = await Promise.all([
     db.collection("listings").where("status", "==", "active").count().get(),
     db.collection("orders").where("status", "==", "completed").get(),
-    db.collection("users").orderBy("createdAt", "desc").limit(8).get(),
     db.collection("listings").orderBy("createdAt", "desc").limit(8).get(),
-    db.collection("orders").where("status", "==", "completed").orderBy("completedAt", "desc").limit(8).get(),
+    // Over-fetched, then filtered+sliced in memory below — a plain
+    // .limit(8) here could come back entirely (or mostly) old test-mode
+    // orders if any happen to have recent-looking completedAt values,
+    // crowding out genuinely recent live sales.
+    db.collection("orders").where("status", "==", "completed").orderBy("completedAt", "desc").limit(40).get(),
+    db.collection("orders").where("status", "==", "cancelled").get(),
+    db.collection("orders").where("status", "==", "awaiting_shipment").get(),
   ]);
 
-  const usersSnap = await db.collection("users").count().get();
+  // The Firestore "users" collection is NOT a full user registry — a doc
+  // there only ever gets created lazily, the first time someone sets an
+  // address, registers a push token, or touches Stripe Connect (see
+  // address.js / pushTokens.js / stripeConnect.js). Someone who signed up
+  // five minutes ago and hasn't done any of those yet is a completely real
+  // account with zero presence in that collection. Firebase Auth's own
+  // user list is the actual source of truth for "how many people have
+  // signed up" — paginated here since listUsers() caps at 1000 per call.
+  let allAuthUsers = [];
+  let pageToken;
+  do {
+    const page = await getAuth().listUsers(1000, pageToken);
+    allAuthUsers = allAuthUsers.concat(page.users);
+    pageToken = page.pageToken;
+  } while (pageToken);
+
+  const totalUsers = allAuthUsers.length;
+  const recentUsers = [...allAuthUsers]
+    .sort((a, b) => new Date(b.metadata.creationTime).getTime() - new Date(a.metadata.creationTime).getTime())
+    .slice(0, 8)
+    .map((u) => ({ uid: u.uid, email: u.email || "", createdAt: u.metadata.creationTime }));
+
   const suspendedSnap = await db.collection("users").where("accountStatus", "==", "suspended").count().get();
   const bannedSnap = await db.collection("users").where("accountStatus", "==", "banned").count().get();
   const totalListingsSnap = await db.collection("listings").count().get();
-  const cancelledOrdersSnap = await db.collection("orders").where("status", "==", "cancelled").count().get();
-  const awaitingOrdersSnap = await db.collection("orders").where("status", "==", "awaiting_shipment").count().get();
+
+  // Every real order created from this point forward carries a livemode
+  // field taken directly from Stripe's own PaymentIntent object (see
+  // checkout.js / cartCheckout.js) — true for a real charge, false for a
+  // test-key charge, and simply ABSENT on every order that predates this
+  // fix. Filtering strictly on === true is what correctly excludes both
+  // explicit test-mode orders and that entire backlog of pre-existing
+  // orders in one pass, without needing to know which is which by hand or
+  // guess based on price/date.
+  const isLive = (doc) => doc.data().livemode === true;
+  const completedLive = completedOrdersSnap.docs.filter(isLive);
+  const cancelledLive = cancelledOrdersRawSnap.docs.filter(isLive);
+  const awaitingLive = awaitingOrdersRawSnap.docs.filter(isLive);
+  const recentSalesLive = recentSalesRawSnap.docs.filter(isLive).slice(0, 8);
 
   let totalVolume = 0;
   let totalFees = 0;
   let totalHeld = 0;
-  completedOrdersSnap.forEach((doc) => {
+  completedLive.forEach((doc) => {
     const o = doc.data();
     const price = o.listing?.price || 0;
     totalVolume += price;
     if (!o.giveaway) totalFees += Math.max(price - (o.sellerEarned || 0) - (o.shippingCost || 0), 0);
   });
-  awaitingOrdersSnap.forEach(() => {}); // count already fetched above; volume for awaiting orders isn't summed here to keep this call fast — held balance below covers it approximately
-  const awaitingSnapFull = await db.collection("orders").where("status", "==", "awaiting_shipment").get();
-  awaitingSnapFull.forEach((doc) => {
+  awaitingLive.forEach((doc) => {
     totalHeld += doc.data().listing?.price || 0;
   });
 
   return {
-    totalUsers: usersSnap.data().count,
-    activeUsers: usersSnap.data().count - suspendedSnap.data().count - bannedSnap.data().count,
+    totalUsers,
+    activeUsers: totalUsers - suspendedSnap.data().count - bannedSnap.data().count,
     suspendedUsers: suspendedSnap.data().count,
     bannedUsers: bannedSnap.data().count,
     totalListings: totalListingsSnap.data().count,
     activeListings: activeListingsSnap.data().count,
-    completedSales: completedOrdersSnap.size,
-    cancelledTransactions: cancelledOrdersSnap.data().count,
-    pendingTransactions: awaitingOrdersSnap.data().count,
+    completedSales: completedLive.length,
+    cancelledTransactions: cancelledLive.length,
+    pendingTransactions: awaitingLive.length,
     totalVolume,
     totalFees,
     totalHeld,
-    recentUsers: recentUsersSnap.docs.map((d) => ({ uid: d.id, email: d.data().email || "", createdAt: d.data().createdAt || null })),
+    recentUsers,
     recentListings: recentListingsSnap.docs.map((d) => ({ id: d.id, title: d.data().title, brand: d.data().brand, price: d.data().price, createdAt: d.data().createdAt })),
-    recentSales: recentSalesSnap.docs.map((d) => ({
+    recentSales: recentSalesLive.map((d) => ({
       id: d.id,
       item: `${d.data().listing?.brand || ""} ${d.data().listing?.title || ""}`.trim(),
       price: d.data().listing?.price,

@@ -192,6 +192,7 @@ async function markOrderPaid(paymentIntent) {
       sellerId,
       sellerName: sellerName || "",
       status: "awaiting_shipment",
+      livemode: paymentIntent.livemode,
       createdAt: now,
       shipByAt: computeShipDeadline(now),
       completedAt: null,
