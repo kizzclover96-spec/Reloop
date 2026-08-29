@@ -15,7 +15,7 @@ workflows:
     #   2. Replace REPLACE_WITH_YOUR_INTEGRATION_NAME below with
     #      whatever name you gave it in step 1 — it has to match exactly.
     integrations:
-      app_store_connect: Codemagic
+      app_store_connect: reloop-signing
 
     environment:
       ios_signing:
