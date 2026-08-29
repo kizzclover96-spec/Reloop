@@ -465,6 +465,7 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "It depends on the seller and the carrier, but sellers are expected to ship within 24 business hours of purchase. Once it's shipped, delivery follows normal shipping timelines for your area.",
     "help.q18": "Who engineered Reloop?",
     "help.a18": "Reloop was engineered by Malvin.",
+    "profile.printIosNote": "Printing isn't available in the app on iOS yet. Sign in at reloop-steel.vercel.app in your browser to print this shipping label — you'll need to ship the item to receive payment.",
   },
 
   de: {
@@ -918,6 +919,7 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "Das hängt vom Verkäufer und vom Versanddienst ab, aber Verkäufer sollen innerhalb von 24 Werkstunden nach dem Kauf versenden. Nach dem Versand richtet sich die Lieferzeit nach den üblichen Versandzeiten in deiner Region.",
     "help.q18": "Wer hat Reloop entwickelt?",
     "help.a18": "Reloop wurde von Malvin entwickelt.",
+    "profile.printIosNote": "Drucken ist in der App unter iOS noch nicht verfügbar. Melde dich auf reloop-steel.vercel.app in deinem Browser an, um dieses Versandetikett zu drucken — du musst den Artikel versenden, um bezahlt zu werden.",
   },
 
   es: {
@@ -1371,6 +1373,7 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "Depende del vendedor y de la transportista, pero se espera que los vendedores envíen dentro de 24 horas hábiles tras la compra. Una vez enviado, la entrega sigue los plazos habituales de envío de tu zona.",
     "help.q18": "¿Quién creó Reloop?",
     "help.a18": "Reloop fue creado por Malvin.",
+    "profile.printIosNote": "Imprimir aún no está disponible en la app en iOS. Inicia sesión en reloop-steel.vercel.app desde tu navegador para imprimir esta etiqueta de envío — necesitas enviar el artículo para recibir el pago.",
   },
 
   fr: {
@@ -1824,6 +1827,7 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "Cela dépend du vendeur et du transporteur, mais les vendeurs sont censés expédier sous 24 heures ouvrées après l'achat. Une fois expédiée, la livraison suit les délais d'expédition habituels de votre région.",
     "help.q18": "Qui a conçu Reloop ?",
     "help.a18": "Reloop a été conçu par Malvin.",
+    "profile.printIosNote": "L'impression n'est pas encore disponible dans l'application sur iOS. Connectez-vous sur reloop-steel.vercel.app depuis votre navigateur pour imprimer cette étiquette d'expédition — vous devez expédier l'article pour recevoir le paiement.",
   },
   tr: {
     "nav.home": "Anasayfa",
@@ -2267,6 +2271,7 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "Bu satıcıya ve kargo firmasına bağlıdır, ancak satıcıların satın almadan sonra 24 iş saati içinde göndermesi beklenir. Gönderildikten sonra, teslimat bölgendeki normal kargo sürelerini takip eder.",
     "help.q18": "Reloop'u kim geliştirdi?",
     "help.a18": "Reloop, Malvin tarafından geliştirildi.",
+    "profile.printIosNote": "Yazdırma özelliği iOS uygulamasında henüz kullanılamıyor. Bu kargo etiketini yazdırmak için tarayıcında reloop-steel.vercel.app adresinden giriş yap — ödemeyi alabilmen için ürünü göndermen gerekiyor.",
   },
   zh: {
     "nav.home": "首页",
@@ -2710,6 +2715,7 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "这取决于卖家和物流公司，但卖家应在购买后 24 个工作小时内发货。发货后，配送时间将遵循你所在地区的正常物流时效。",
     "help.q18": "Reloop 是谁开发的？",
     "help.a18": "Reloop 由 Malvin 开发打造。",
+    "profile.printIosNote": "iOS 应用内暂不支持打印。请在浏览器中登录 reloop-steel.vercel.app 来打印此运单——你需要发货才能收到货款。",
   },
   hi: {
     "nav.home": "होम",
@@ -3153,6 +3159,7 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "यह विक्रेता और कैरियर पर निर्भर करता है, लेकिन विक्रेताओं से खरीद के 24 कार्य-घंटों के भीतर शिप करने की उम्मीद की जाती है। शिप होने के बाद, डिलीवरी आपके क्षेत्र के सामान्य शिपिंग समय के अनुसार होती है।",
     "help.q18": "Reloop को किसने बनाया?",
     "help.a18": "Reloop को Malvin द्वारा इंजीनियर किया गया था।",
+    "profile.printIosNote": "iOS ऐप में अभी प्रिंटिंग उपलब्ध नहीं है। इस शिपिंग लेबल को प्रिंट करने के लिए अपने ब्राउज़र में reloop-steel.vercel.app पर साइन इन करें — भुगतान पाने के लिए आपको आइटम शिप करना होगा।",
   },
   sq: {
     "nav.home": "Kryefaqja",
@@ -3596,5 +3603,6 @@ export const translations: Record<LangCode, Dict> = {
     "help.a17": "Varet nga shitësi dhe transportuesi, por shitësit pritet të dërgojnë brenda 24 orëve pune nga blerja. Pasi të dërgohet, dorëzimi ndjek afatet e zakonshme të dërgesave për zonën tënde.",
     "help.q18": "Kush e krijoi Reloop?",
     "help.a18": "Reloop u krijua nga Malvin.",
+    "profile.printIosNote": "Printimi nuk është ende i disponueshëm në aplikacion në iOS. Hyr te reloop-steel.vercel.app në shfletuesin tënd për të printuar këtë etiketë dërgese — duhet ta dërgosh artikullin për të marrë pagesën.",
   },
 };

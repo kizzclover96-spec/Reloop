@@ -20,6 +20,8 @@ export default function ReceiptDetail({ order, role, sellerId, onBack }: Receipt
   const isAwaitingShipment = order.status === "awaiting_shipment";
   const green = isSeller && isAwaitingShipment;
 
+  const isIOS = Capacitor.getPlatform() === "ios";
+
   /**
    * window.print() works fine in a real mobile browser (which is why this
    * worked in testing before this was ever a native app) but does nothing
@@ -27,8 +29,17 @@ export default function ReceiptDetail({ order, role, sellerId, onBack }: Receipt
    * there. @capgo/capacitor-printer's printWebView() uses the platform's
    * actual native print framework (Android's PrintManager, iOS's
    * UIPrintInteractionController) to print the current screen instead.
+   *
+   * iOS specifically doesn't have this plugin available at all right now —
+   * it's deliberately excluded from the iOS build (see codemagic.yaml) due
+   * to a confirmed bug in Capacitor 8's own SPM distribution that strips
+   * core API surface plugins need, unrelated to this app's own code. Since
+   * the native call would just fail silently on iOS, this never even
+   * attempts it there — the button itself is replaced with a note instead
+   * (see the JSX below), so nothing here should ever actually run on iOS.
    */
   const handlePrint = () => {
+    if (isIOS) return;
     if (Capacitor.isNativePlatform()) {
       CapacitorPrinter.printWebView({ name: `Reloop-${order.receiptCode}` }).catch((err) =>
         console.warn("Native print failed:", err)
@@ -254,7 +265,24 @@ export default function ReceiptDetail({ order, role, sellerId, onBack }: Receipt
           </p>
         )}
 
-        {isSeller && (
+        {isSeller && isIOS && (
+          <p
+            style={{
+              fontFamily: SANS,
+              fontSize: 11.5,
+              color: COLOR.inkSoft,
+              lineHeight: 1.5,
+              marginTop: 16,
+              padding: "12px 14px",
+              background: COLOR.lineSoft,
+              borderRadius: 10,
+            }}
+          >
+            {t("profile.printIosNote")}
+          </p>
+        )}
+
+        {isSeller && !isIOS && (
           <button
             onClick={handlePrint}
             disabled={!order.shippingAddress}
