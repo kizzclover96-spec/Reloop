@@ -4,21 +4,20 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
 
-    environment:
-      # --- Code signing ---
-      # This is what actually resolves "No matching profiles found for
-      # bundle identifier..." — Codemagic needs to know which App Store
-      # Connect API key integration to use to fetch/generate signing files
-      # automatically. Two things need to be true before this works:
-      #   1. Codemagic dashboard → Team settings → Integrations →
-      #      Developer Portal → Connect, providing an App Store Connect
-      #      API key (Issuer ID + Key ID + the downloaded .p8 file) and
-      #      giving that connection a NAME of your choosing.
-      #   2. Replace REPLACE_WITH_YOUR_INTEGRATION_NAME below with
-      #      whatever name you gave it in step 1 — it has to match exactly.
-      integrations:
-        app_store_connect: Codemagic
+    # This is what actually resolves "No matching profiles found for
+    # bundle identifier..." — Codemagic needs to know which App Store
+    # Connect API key integration to use to fetch/generate signing files
+    # automatically. Two things need to be true before this works:
+    #   1. Codemagic dashboard → Team settings → Integrations →
+    #      Developer Portal → Connect, providing an App Store Connect
+    #      API key (Issuer ID + Key ID + the downloaded .p8 file) and
+    #      giving that connection a NAME of your choosing.
+    #   2. Replace REPLACE_WITH_YOUR_INTEGRATION_NAME below with
+    #      whatever name you gave it in step 1 — it has to match exactly.
+    integrations:
+      app_store_connect: Codemagic
 
+    environment:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.malvin.reloop
