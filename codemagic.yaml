@@ -25,6 +25,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.malvin.reloop"
         # Once you've created the app listing in App Store Connect, its
         # numeric App ID goes here (App Store Connect → your app → General
         # → App Information → Apple ID) — add this var back in, along with
@@ -89,6 +90,7 @@ workflows:
 
       - name: Set up code signing
         script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           xcode-project use-profiles
 
       - name: Build ipa
