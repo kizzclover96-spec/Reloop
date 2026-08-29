@@ -26,12 +26,7 @@ workflows:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.malvin.reloop"
-        # Once you've created the app listing in App Store Connect, its
-        # numeric App ID goes here (App Store Connect → your app → General
-        # → App Information → Apple ID) — add this var back in, along with
-        # the "Increment build number" script step further down, once
-        # you're actually at that stage. Leaving it out entirely for now,
-        # since an empty placeholder isn't valid here.
+        APP_STORE_APPLE_ID: 6806555630
 
       node: 22.11.0
       xcode: 16.2
@@ -88,6 +83,12 @@ workflows:
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           xcode-project use-profiles
 
+      - name: Increment build number
+        script: |
+          cd $CM_BUILD_DIR/ios/App
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
+          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+
       - name: Build ipa
         script: |
           xcode-project build-ipa \
@@ -98,13 +99,7 @@ workflows:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
-# No "publishing:" block yet — Codemagic doesn't allow that key to exist
-# with everything under it commented out (which is what caused the original
-# validation error). Add it back once GoogleService-Info.plist, the URL
-# scheme, and code signing are all confirmed working end to end — something
-# like:
-#
-#   publishing:
-#     app_store_connect:
-#       auth: integration
-#       submit_to_testflight: true
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
