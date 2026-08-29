@@ -3,3 +3,8 @@ dist
 .DS_Store
 .env.local
 .env
+
+# Android release signing — never commit real passwords or the keystore itself
+keystore.properties
+*.jks
+*.keystore
