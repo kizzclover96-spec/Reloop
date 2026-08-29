@@ -35,7 +35,6 @@ workflows:
 
       node: 22.11.0
       xcode: 16.2
-      cocoapods: default
 
       # --- Firebase / Stripe secrets ---
       # These correspond exactly to .env.example, PLUS one more:
@@ -83,10 +82,6 @@ workflows:
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
-
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App && pod install
 
       - name: Set up code signing
         script: |
