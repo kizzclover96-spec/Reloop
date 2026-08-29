@@ -33,7 +33,7 @@ workflows:
         # you're actually at that stage. Leaving it out entirely for now,
         # since an empty placeholder isn't valid here.
 
-      node: 20.19.0
+      node: 22.11.0
       xcode: 16.2
       cocoapods: default
 
